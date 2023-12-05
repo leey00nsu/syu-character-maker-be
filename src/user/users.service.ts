@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { GoogleUserDto } from 'src/auth/dtos/googleUser.dto';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
-import { GoogleUserDto } from 'src/auth/dtos/googleUser.dto';
 
 @Injectable()
 export class UsersService {
@@ -20,12 +20,15 @@ export class UsersService {
   }
 
   async create(profile: GoogleUserDto) {
-    return this.usersRepository.save({
+    const newUser = this.usersRepository.create({
       provider: profile.provider,
       providerId: profile.providerId,
       name: profile.name,
       email: profile.email,
+      picture: profile.photo,
     });
+
+    return this.usersRepository.save(newUser);
   }
 
   async remove(id: number) {

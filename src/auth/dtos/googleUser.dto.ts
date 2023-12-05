@@ -6,4 +6,6 @@ export class GoogleUserDto {
   email: string;
 
   name: string;
+
+  photo: string;
 }
