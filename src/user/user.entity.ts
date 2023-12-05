@@ -6,6 +6,12 @@ export class User {
   id: number;
 
   @Column()
+  provider: string;
+
+  @Column()
+  providerId: string;
+
+  @Column()
   name: string;
 
   @Column()
