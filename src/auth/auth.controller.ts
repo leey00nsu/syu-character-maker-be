@@ -2,39 +2,40 @@ import {
   ClassSerializerInterceptor,
   Controller,
   Get,
+  Query,
   Req,
-  Res,
   Session,
-  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { UsersService } from 'src/user/users.service';
-import { GoogleUserDto } from './dtos/googleUser.dto';
-import { GoogleAuthGuard } from './guards/google.guard';
-import { User } from 'src/user/user.entity';
+import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private usersService: UsersService) {}
+  constructor(
+    private usersService: UsersService,
+    private authService: AuthService,
+  ) {}
+
   @Get('google')
-  @UseGuards(GoogleAuthGuard)
-  async googleAuth() {
-    return 'google';
-  }
-
-  @Get('google/callback')
-  @UseGuards(GoogleAuthGuard)
   @UseInterceptors(ClassSerializerInterceptor)
-  async googleAuthCallback(@Req() req) {
-    const profile: GoogleUserDto = req.user;
-    const { provider, email } = profile;
+  async googleAuth(@Query() query, @Session() session) {
+    const { code } = query;
 
-    let user = await this.usersService.findOne(provider, email);
+    const token = await this.authService.getGoogleToken(code);
+
+    const profile = await this.authService.getGoogleProfile(token);
+
+    const { email } = profile;
+
+    let user = await this.usersService.findOne('google', email);
 
     if (!user) {
       console.log('유저가 존재하지 않습니다, 새로 만듭니다.');
       user = await this.usersService.create(profile);
     }
+
+    session.user = user;
 
     return {
       statusCode: 200,
@@ -42,17 +43,21 @@ export class AuthController {
     };
   }
 
+  @Get()
   @Get('logout')
-  logout(@Req() req, @Res() res) {
+  logout(@Req() req) {
     req.session.destroy();
 
-    return res.redirect('/');
+    return {
+      statusCode: 200,
+      message: '로그아웃 되었습니다.',
+    };
   }
 
   @Get('isLogin')
   @UseInterceptors(ClassSerializerInterceptor)
   async isLogin(@Session() session) {
-    const sessionUser = session?.passport?.user;
+    const sessionUser = session.user;
 
     if (!sessionUser) {
       return {

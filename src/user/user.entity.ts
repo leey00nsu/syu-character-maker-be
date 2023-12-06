@@ -21,5 +21,5 @@ export class User {
   email: string;
 
   @Column()
-  picture: string;
+  photo: string;
 }

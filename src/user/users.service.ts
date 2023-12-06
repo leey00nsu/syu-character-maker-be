@@ -25,7 +25,7 @@ export class UsersService {
       providerId: profile.providerId,
       name: profile.name,
       email: profile.email,
-      picture: profile.photo,
+      photo: profile.photo,
     });
 
     return this.usersRepository.save(newUser);
