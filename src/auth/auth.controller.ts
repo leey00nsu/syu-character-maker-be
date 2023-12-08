@@ -3,8 +3,8 @@ import {
   Controller,
   Get,
   Query,
-  Req,
   Session,
+  UnauthorizedException,
   UseInterceptors,
 } from '@nestjs/common';
 import { UsersService } from 'src/user/users.service';
@@ -43,10 +43,17 @@ export class AuthController {
     };
   }
 
-  @Get()
   @Get('logout')
-  logout(@Req() req) {
-    req.session.destroy();
+  logout(@Session() session) {
+    const sessionUser = session.user;
+
+    if (!sessionUser) {
+      return new UnauthorizedException('로그인이 필요합니다.');
+    }
+
+    console.log(sessionUser, '로그아웃');
+
+    session.destroy();
 
     return {
       statusCode: 200,
@@ -54,16 +61,13 @@ export class AuthController {
     };
   }
 
-  @Get('isLogin')
+  @Get('user')
   @UseInterceptors(ClassSerializerInterceptor)
-  async isLogin(@Session() session) {
+  async getUser(@Session() session) {
     const sessionUser = session.user;
 
     if (!sessionUser) {
-      return {
-        statusCode: 401,
-        message: '로그인이 필요합니다.',
-      };
+      return new UnauthorizedException('로그인이 필요합니다.');
     }
 
     const { provider, email } = sessionUser;
