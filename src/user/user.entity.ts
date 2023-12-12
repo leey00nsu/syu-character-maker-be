@@ -1,5 +1,6 @@
+import { Posts } from 'src/posts/posts.entity';
 import { Exclude } from 'class-transformer';
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class User {
@@ -22,4 +23,7 @@ export class User {
 
   @Column()
   photo: string;
+
+  @OneToMany(() => Posts, (posts) => posts.user)
+  posts: Posts[];
 }

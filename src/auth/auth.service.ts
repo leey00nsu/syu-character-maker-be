@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 import { OAuth2Client } from 'google-auth-library';
+import { UserInfoDto } from './dtos/userInfo.dto';
 
 @Injectable()
 export class AuthService {
@@ -17,16 +18,18 @@ export class AuthService {
   }
 
   async getGoogleProfile(token: string) {
-    const profile = await axios.get(
+    const userInfo = await axios.get(
       `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${token}`,
     );
 
-    return {
+    const profile: UserInfoDto = {
       provider: 'google',
-      providerId: profile.data.sub,
-      name: profile.data.name,
-      email: profile.data.email,
-      photo: profile.data.picture,
+      providerId: userInfo.data.sub,
+      name: userInfo.data.name,
+      email: userInfo.data.email,
+      photo: userInfo.data.picture,
     };
+
+    return profile;
   }
 }

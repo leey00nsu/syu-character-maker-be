@@ -6,6 +6,8 @@ import { User } from './user/user.entity';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './user/users.module';
 import { ConfigModule } from '@nestjs/config';
+import { PostsModule } from './posts/posts.module';
+import { Posts } from './posts/posts.entity';
 
 @Module({
   imports: [
@@ -20,11 +22,12 @@ import { ConfigModule } from '@nestjs/config';
       username: 'postgres',
       password: 'postgres',
       database: 'syu-character-maker',
-      entities: [User],
+      entities: [User, Posts],
       synchronize: true,
     }),
     AuthModule,
     UsersModule,
+    PostsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

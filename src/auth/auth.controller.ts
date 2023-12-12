@@ -4,11 +4,12 @@ import {
   Get,
   Query,
   Session,
-  UnauthorizedException,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { UsersService } from 'src/user/users.service';
 import { AuthService } from './auth.service';
+import { SessionAuthGuard } from './guard/sessionAuth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -37,6 +38,8 @@ export class AuthController {
 
     session.user = user;
 
+    console.log('googleLogin', new Date());
+
     return {
       statusCode: 200,
       user,
@@ -44,14 +47,9 @@ export class AuthController {
   }
 
   @Get('logout')
+  @UseGuards(SessionAuthGuard)
   logout(@Session() session) {
-    const sessionUser = session.user;
-
-    if (!sessionUser) {
-      return new UnauthorizedException('로그인이 필요합니다.');
-    }
-
-    console.log(sessionUser, '로그아웃');
+    console.log('logout', new Date());
 
     session.destroy();
 
@@ -62,13 +60,11 @@ export class AuthController {
   }
 
   @Get('user')
+  @UseGuards(SessionAuthGuard)
   @UseInterceptors(ClassSerializerInterceptor)
   async getUser(@Session() session) {
+    console.log('user', new Date());
     const sessionUser = session.user;
-
-    if (!sessionUser) {
-      return new UnauthorizedException('로그인이 필요합니다.');
-    }
 
     const { provider, email } = sessionUser;
 

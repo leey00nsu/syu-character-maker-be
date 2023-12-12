@@ -1,4 +1,4 @@
-export class GoogleUserDto {
+export class UserInfoDto {
   provider: string;
 
   providerId: string;
