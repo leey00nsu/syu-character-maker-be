@@ -27,9 +27,16 @@ export class AuthController {
 
     const profile = await this.authService.getGoogleProfile(token);
 
-    const { email } = profile;
+    if (!profile) {
+      return {
+        statusCode: 400,
+        message: '구글 프로필을 가져올 수 없습니다.',
+      };
+    }
 
-    let user = await this.usersService.findOne('google', email);
+    const { providerId, email } = profile;
+
+    let user = await this.usersService.findOne(providerId, email);
 
     if (!user) {
       console.log('유저가 존재하지 않습니다, 새로 만듭니다.');
@@ -42,7 +49,8 @@ export class AuthController {
 
     return {
       statusCode: 200,
-      user,
+      message: '구글 로그인에 성공하였습니다.',
+      data: user,
     };
   }
 
@@ -64,12 +72,16 @@ export class AuthController {
   @UseInterceptors(ClassSerializerInterceptor)
   async getUser(@Session() session) {
     console.log('user', new Date());
+
     const sessionUser = session.user;
+    const { providerId, email } = sessionUser;
 
-    const { provider, email } = sessionUser;
+    const user = await this.usersService.findOne(providerId, email);
 
-    const user = await this.usersService.findOne(provider, email);
-
-    return { statusCode: 200, user };
+    return {
+      statusCode: 200,
+      message: '유저 정보를 정상적으로 가져왔습니다.',
+      data: user,
+    };
   }
 }

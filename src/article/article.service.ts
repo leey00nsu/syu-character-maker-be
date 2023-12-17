@@ -1,15 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { common, objectstorage as os } from 'oci-sdk';
-import { Posts } from './posts.entity';
-import { Repository } from 'typeorm';
-import { CreatePostDto } from './dtos/createPost.dto';
 import * as crypto from 'crypto';
+import { common, objectstorage as os } from 'oci-sdk';
+import { Repository } from 'typeorm';
+import { CreateArticleDto } from './dtos/createArticle.dto';
+import { CreateLikedbyDto } from './dtos/createLikedby.dto';
+import { Article } from './entities/article.entity';
+import { LikedBy } from './entities/likedBy.entity';
 
 @Injectable()
-export class PostsService {
+export class ArticleService {
   constructor(
-    @InjectRepository(Posts) private postsRepository: Repository<Posts>,
+    @InjectRepository(Article) private articleRepository: Repository<Article>,
+    @InjectRepository(LikedBy) private likedByRepository: Repository<LikedBy>,
   ) {}
 
   async uploadImageToBucket(file: Express.Multer.File) {
@@ -54,10 +57,10 @@ export class PostsService {
     return objectUUID;
   }
 
-  async createPost(post: CreatePostDto) {
-    const newPost = this.postsRepository.create(post);
+  async createArticle(article: CreateArticleDto) {
+    const newArticle = this.articleRepository.create(article);
 
-    return this.postsRepository.save(newPost);
+    return this.articleRepository.save(newArticle);
   }
 
   async getPresignedUrl() {
@@ -71,6 +74,7 @@ export class PostsService {
       );
 
     const bucket: string = 'syucharactermaker-bucket';
+    const timeExpires = new Date(Date.now() + 1000 * 60 * 60); // 유효 시간 1시간
 
     const client = new os.ObjectStorageClient({
       authenticationDetailsProvider: provider,
@@ -88,7 +92,7 @@ export class PostsService {
         accessType:
           os.models.CreatePreauthenticatedRequestDetails.AccessType
             .AnyObjectRead,
-        timeExpires: new Date(Date.now() + 1000 * 60 * 60), // 유효 시간 1시간
+        timeExpires: timeExpires,
       };
 
       console.log('버킷에 사전 인증 요청 ...');
@@ -108,13 +112,54 @@ export class PostsService {
 
       const presignedUrl = presignResponse.preauthenticatedRequest.fullPath;
 
-      return presignedUrl;
+      return [presignedUrl, timeExpires];
     } catch (error) {
       throw new Error(error);
     }
   }
 
-  async findAllPosts() {
-    return this.postsRepository.find();
+  async findAll() {
+    return this.articleRepository
+      .createQueryBuilder('article')
+      .leftJoinAndSelect('article.author', 'author')
+      .leftJoinAndSelect('article.likedBy', 'likedBy')
+      .leftJoinAndSelect('likedBy.user', 'user')
+      .select([
+        'article.id',
+        'article.title',
+        'article.content',
+        'article.imageUrl',
+        'author.name',
+        'likedBy.userId',
+      ])
+      .getMany();
+  }
+
+  async findOne(articleId: number) {
+    return this.articleRepository.findOne({ where: { id: articleId } });
+  }
+
+  async findLikedUser(articleId: number) {
+    return this.likedByRepository
+      .createQueryBuilder('likedBy')
+      .select('likedBy.userId')
+      .where('likedBy.articleId = :articleId', { articleId })
+      .getRawMany();
+  }
+
+  async createLikedBy(likedBy: CreateLikedbyDto) {
+    const newLikedBy = this.likedByRepository.create(likedBy);
+
+    return this.likedByRepository.save(newLikedBy);
+  }
+
+  async findLikedBy(userId: number, articleId: number) {
+    return this.likedByRepository.findOne({
+      where: { user: { id: userId }, article: { id: articleId } },
+    });
+  }
+
+  async removeLikedBy(likedBy: LikedBy) {
+    return this.likedByRepository.remove(likedBy);
   }
 }

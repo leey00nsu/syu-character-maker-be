@@ -1,4 +1,4 @@
-export class UserInfoDto {
+export class CreateUserDto {
   provider: string;
 
   providerId: string;

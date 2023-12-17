@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 import { OAuth2Client } from 'google-auth-library';
-import { UserInfoDto } from './dtos/userInfo.dto';
+import { CreateUserDto } from 'src/user/dtos/createUser.dto';
 
 @Injectable()
 export class AuthService {
@@ -22,7 +22,7 @@ export class AuthService {
       `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${token}`,
     );
 
-    const profile: UserInfoDto = {
+    const profile: CreateUserDto = {
       provider: 'google',
       providerId: userInfo.data.sub,
       name: userInfo.data.name,

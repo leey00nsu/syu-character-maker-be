@@ -1,5 +1,6 @@
-import { Posts } from 'src/posts/posts.entity';
 import { Exclude } from 'class-transformer';
+import { Article } from 'src/article/entities/article.entity';
+import { LikedBy } from 'src/article/entities/likedBy.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
@@ -8,6 +9,7 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Exclude({ toPlainOnly: true })
   @Column()
   provider: string;
 
@@ -24,6 +26,9 @@ export class User {
   @Column()
   photo: string;
 
-  @OneToMany(() => Posts, (posts) => posts.user)
-  posts: Posts[];
+  @OneToMany(() => Article, (article) => article.author)
+  articles: Article[];
+
+  @OneToMany(() => LikedBy, (likedBy) => likedBy.user)
+  likedArticles: LikedBy[];
 }
