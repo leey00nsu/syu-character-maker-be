@@ -6,16 +6,19 @@ import {
   Post,
   Session,
   UploadedFile,
+  UseFilters,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SessionAuthGuard } from 'src/auth/guard/sessionAuth.guard';
+import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
 import { UsersService } from 'src/user/users.service';
 import { ArticleService } from './article.service';
 import { ListArticle } from './dtos/listArticle.dto';
 
 @Controller('article')
+@UseFilters(HttpExceptionFilter)
 export class ArticleController {
   constructor(
     private articleService: ArticleService,
@@ -29,18 +32,11 @@ export class ArticleController {
     @Session() session,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    const { providerId, email } = session.user;
+    const { id } = session.user;
 
-    const user = await this.usersService.findOne(providerId, email);
+    const user = await this.usersService.findOne(id);
 
-    let imageUrl = '';
-
-    try {
-      imageUrl = await this.articleService.uploadImageToBucket(file);
-    } catch (error) {
-      console.log('버킷에 업로드 중 에러가 발생하였습니다. :' + error);
-      return new Error('버킷에 업로드 중 에러가 발생하였습니다. :' + error);
-    }
+    const imageUrl = await this.articleService.uploadImageToBucket(file);
 
     const newArticle = {
       title: '테스트 게시글',
@@ -55,9 +51,12 @@ export class ArticleController {
   }
 
   @Get('')
-  async getAllArticles(@Session() session) {
-    const allArticle = await this.articleService.findAll();
+  async getArticleList(@Session() session) {
+    const articleList = await this.articleService.findAll();
 
+    const isLogin = session.user ? true : false;
+
+    // presignedUrl이 없거나 만료되었을 경우 새로 생성
     if (!session.presignedUrl || new Date() > session.presignedUrlExpireTime) {
       const [presignedUrl, timeExpires] =
         await this.articleService.getPresignedUrl();
@@ -65,43 +64,51 @@ export class ArticleController {
       session.presignedUrlExpireTime = timeExpires;
     }
 
-    const allArticleWithUrl = allArticle.map((article) => {
-      const listArticle = new ListArticle(article);
+    // 게시글 리스트에 presignedUrl 붙여서 반환
+    const articleListWithPresignedUrl = articleList.map((article) => {
+      const isLiked = isLogin
+        ? article.likedBy.some((likedBy) => likedBy.userId === session.user.id)
+        : false;
+      const likeCount = article.likedBy.length;
+      const presignedUrl = session.presignedUrl + article.imageUrl;
 
-      return {
-        ...listArticle,
-        imageUrl: session.presignedUrl + listArticle.imageUrl,
-      };
+      const listArticle = new ListArticle({
+        ...article,
+        isLiked,
+        likeCount,
+        presignedUrl,
+      });
+
+      return listArticle;
     });
 
     return {
       statusCode: 200,
       message: '모든 게시글 조회 성공!',
-      data: allArticleWithUrl,
+      data: articleListWithPresignedUrl,
     };
   }
 
   @Get(':articleId')
   async getArticle(@Param('articleId', ParseIntPipe) articleId: number) {
-    return await this.articleService.findLikedUser(articleId);
+    return await this.articleService.findOne(articleId);
   }
 
-  @Get(':articleId/like')
+  @Post(':articleId/like')
   @UseGuards(SessionAuthGuard)
   async toggleLikeArticle(
     @Session() session,
     @Param('articleId', ParseIntPipe) articleId: number,
   ) {
-    const { userId, providerId, email } = session.user;
+    const { id } = session.user;
 
-    const user = await this.usersService.findOne(providerId, email);
-
+    const user = await this.usersService.findOne(id);
     const article = await this.articleService.findOne(articleId);
-
-    const likedBy = await this.articleService.findLikedBy(userId, articleId);
+    const likedBy = await this.articleService.findLikedBy(id, articleId);
 
     if (likedBy) {
       this.articleService.removeLikedBy(likedBy);
+      console.log(user.name + '님이 ' + article.id + ' 좋아요 취소!');
       return { statusCode: 200, message: '좋아요 취소!' };
     }
 
@@ -111,6 +118,7 @@ export class ArticleController {
     };
 
     this.articleService.createLikedBy(newLikedBy);
+    console.log(user.name + '님이 ' + article.id + ' 좋아요!');
 
     return { statusCode: 200, message: '좋아요!' };
   }

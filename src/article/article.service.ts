@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
 import { common, objectstorage as os } from 'oci-sdk';
@@ -37,7 +37,6 @@ export class ArticleService {
       const response = await client.getNamespace(request);
       const namespace = response.value;
 
-      // Create read stream to file
       console.log('버킷에 파일 추가 중...');
       const putObjectRequest: os.requests.PutObjectRequest = {
         namespaceName: namespace,
@@ -51,7 +50,10 @@ export class ArticleService {
       await client.putObject(putObjectRequest);
       console.log('버킷에 파일 추가 완료!');
     } catch (error) {
-      throw new Error(error);
+      throw new HttpException(
+        '파일 업로드 실패',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
 
     return objectUUID;
@@ -114,7 +116,10 @@ export class ArticleService {
 
       return [presignedUrl, timeExpires];
     } catch (error) {
-      throw new Error(error);
+      throw new HttpException(
+        'presigned Url 생성 실패',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -129,6 +134,7 @@ export class ArticleService {
         'article.title',
         'article.content',
         'article.imageUrl',
+        'article.createdAt',
         'author.name',
         'likedBy.userId',
       ])

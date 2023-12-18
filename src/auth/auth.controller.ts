@@ -2,41 +2,37 @@ import {
   ClassSerializerInterceptor,
   Controller,
   Get,
+  Post,
   Query,
   Session,
+  UseFilters,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
 import { UsersService } from 'src/user/users.service';
 import { AuthService } from './auth.service';
 import { SessionAuthGuard } from './guard/sessionAuth.guard';
 
 @Controller('auth')
+@UseFilters(HttpExceptionFilter)
 export class AuthController {
   constructor(
     private usersService: UsersService,
     private authService: AuthService,
   ) {}
 
-  @Get('google')
+  @Post('google')
   @UseInterceptors(ClassSerializerInterceptor)
   async googleAuth(@Query() query, @Session() session) {
     const { code } = query;
 
     const token = await this.authService.getGoogleToken(code);
-
     const profile = await this.authService.getGoogleProfile(token);
 
-    if (!profile) {
-      return {
-        statusCode: 400,
-        message: '구글 프로필을 가져올 수 없습니다.',
-      };
-    }
+    const { providerId } = profile;
 
-    const { providerId, email } = profile;
-
-    let user = await this.usersService.findOne(providerId, email);
+    let user = await this.usersService.findOneByProviderId(providerId);
 
     if (!user) {
       console.log('유저가 존재하지 않습니다, 새로 만듭니다.');
@@ -54,7 +50,7 @@ export class AuthController {
     };
   }
 
-  @Get('logout')
+  @Post('logout')
   @UseGuards(SessionAuthGuard)
   logout(@Session() session) {
     console.log('logout', new Date());
@@ -73,10 +69,9 @@ export class AuthController {
   async getUser(@Session() session) {
     console.log('user', new Date());
 
-    const sessionUser = session.user;
-    const { providerId, email } = sessionUser;
+    const { id } = session.user;
 
-    const user = await this.usersService.findOne(providerId, email);
+    const user = await this.usersService.findOne(id);
 
     return {
       statusCode: 200,

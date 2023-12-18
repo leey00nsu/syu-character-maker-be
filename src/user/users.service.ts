@@ -16,8 +16,12 @@ export class UsersService {
     return this.usersRepository.find();
   }
 
-  async findOne(providerId: string, email: string) {
-    return this.usersRepository.findOne({ where: { providerId, email } });
+  async findOne(id: number) {
+    return this.usersRepository.findOne({ where: { id } });
+  }
+
+  async findOneByProviderId(providerId: string) {
+    return this.usersRepository.findOne({ where: { providerId } });
   }
 
   async create(profile: CreateUserDto) {

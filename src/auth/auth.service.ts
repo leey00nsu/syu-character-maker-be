@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import axios from 'axios';
 import { OAuth2Client } from 'google-auth-library';
 import { CreateUserDto } from 'src/user/dtos/createUser.dto';
@@ -14,6 +14,13 @@ export class AuthService {
 
     const token = await client.getToken(code);
 
+    if (!token) {
+      throw new HttpException(
+        '토큰을 가져올 수 없습니다.',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     return token.tokens.access_token;
   }
 
@@ -21,6 +28,13 @@ export class AuthService {
     const userInfo = await axios.get(
       `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${token}`,
     );
+
+    if (!userInfo) {
+      throw new HttpException(
+        '구글 프로필을 가져올 수 없습니다.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
 
     const profile: CreateUserDto = {
       provider: 'google',

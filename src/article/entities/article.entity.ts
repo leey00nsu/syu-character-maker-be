@@ -26,9 +26,6 @@ export class Article {
   @Column()
   imageUrl: string;
 
-  @Column({ default: 0 })
-  likes: number;
-
   @OneToMany(() => LikedBy, (likedBy) => likedBy.article)
   likedBy: LikedBy[];
 
