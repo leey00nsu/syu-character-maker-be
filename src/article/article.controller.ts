@@ -56,8 +56,18 @@ export class ArticleController {
 
     const isLogin = session.user ? true : false;
 
+    console.log('now', new Date().getTime());
+    console.log('sessionExpired', session.presignedUrlExpireTime);
+    console.log(
+      'isExpired',
+      new Date().getTime() > Number(session.presignedUrlExpireTime),
+    );
+
+    const isExpired =
+      new Date().getTime() > Number(session.presignedUrlExpireTime);
+
     // presignedUrl이 없거나 만료되었을 경우 새로 생성
-    if (!session.presignedUrl || new Date() > session.presignedUrlExpireTime) {
+    if (!session.presignedUrl || isExpired) {
       const [presignedUrl, timeExpires] =
         await this.articleService.getPresignedUrl();
       session.presignedUrl = presignedUrl;

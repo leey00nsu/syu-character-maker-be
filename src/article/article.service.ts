@@ -76,7 +76,7 @@ export class ArticleService {
       );
 
     const bucket: string = 'syucharactermaker-bucket';
-    const timeExpires = new Date(Date.now() + 1000 * 60 * 60); // 유효 시간 1시간
+    const timeExpires = new Date(Date.now() + 1000 * 60); // 유효 시간 1시간
 
     const client = new os.ObjectStorageClient({
       authenticationDetailsProvider: provider,
@@ -114,7 +114,7 @@ export class ArticleService {
 
       const presignedUrl = presignResponse.preauthenticatedRequest.fullPath;
 
-      return [presignedUrl, timeExpires];
+      return [presignedUrl, timeExpires.getTime()];
     } catch (error) {
       throw new HttpException(
         'presigned Url 생성 실패',
