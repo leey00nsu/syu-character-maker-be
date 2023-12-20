@@ -1,9 +1,11 @@
 import {
+  ClassSerializerInterceptor,
   Controller,
   Get,
   Param,
   ParseIntPipe,
   Post,
+  Query,
   Session,
   UploadedFile,
   UseFilters,
@@ -19,6 +21,7 @@ import { ListArticle } from './dtos/listArticle.dto';
 
 @Controller('article')
 @UseFilters(HttpExceptionFilter)
+@UseInterceptors(ClassSerializerInterceptor)
 export class ArticleController {
   constructor(
     private articleService: ArticleService,
@@ -39,8 +42,6 @@ export class ArticleController {
     const imageUrl = await this.articleService.uploadImageToBucket(file);
 
     const newArticle = {
-      title: '테스트 게시글',
-      content: '테스트 게시글 내용',
       imageUrl: imageUrl,
       author: user,
     };
@@ -51,17 +52,18 @@ export class ArticleController {
   }
 
   @Get('')
-  async getArticleList(@Session() session) {
-    const articleList = await this.articleService.findAll();
+  async getArticleList(
+    @Session() session,
+    @Query('page') page: number,
+    @Query('orderBy') orderBy: 'date' | 'like',
+    @Query('order') order: 'ASC' | 'DESC',
+  ) {
+    const articleList =
+      orderBy === 'date'
+        ? await this.articleService.findPaginatedByDate(page, order)
+        : await this.articleService.findPaginatedByLike(page, order);
 
     const isLogin = session.user ? true : false;
-
-    console.log('now', new Date().getTime());
-    console.log('sessionExpired', session.presignedUrlExpireTime);
-    console.log(
-      'isExpired',
-      new Date().getTime() > Number(session.presignedUrlExpireTime),
-    );
 
     const isExpired =
       new Date().getTime() > Number(session.presignedUrlExpireTime);
@@ -75,7 +77,7 @@ export class ArticleController {
     }
 
     // 게시글 리스트에 presignedUrl 붙여서 반환
-    const articleListWithPresignedUrl = articleList.map((article) => {
+    const articleListWithPresignedUrl = articleList.articles.map((article) => {
       const isLiked = isLogin
         ? article.likedBy.some((likedBy) => likedBy.userId === session.user.id)
         : false;
@@ -95,7 +97,10 @@ export class ArticleController {
     return {
       statusCode: 200,
       message: '모든 게시글 조회 성공!',
-      data: articleListWithPresignedUrl,
+      data: {
+        articles: articleListWithPresignedUrl,
+        meta: articleList.meta,
+      },
     };
   }
 

@@ -76,7 +76,7 @@ export class ArticleService {
       );
 
     const bucket: string = 'syucharactermaker-bucket';
-    const timeExpires = new Date(Date.now() + 1000 * 60); // 유효 시간 1시간
+    const timeExpires = new Date(Date.now() + 1000 * 60 * 60); // 유효 시간 1시간
 
     const client = new os.ObjectStorageClient({
       authenticationDetailsProvider: provider,
@@ -123,22 +123,59 @@ export class ArticleService {
     }
   }
 
-  async findAll() {
-    return this.articleRepository
+  async findPaginatedByDate(page: number = 1, order: 'ASC' | 'DESC' = 'DESC') {
+    const pageSize = 10;
+    const skip = (page - 1) * pageSize;
+    const [articles, total] = await this.articleRepository
       .createQueryBuilder('article')
       .leftJoinAndSelect('article.author', 'author')
       .leftJoinAndSelect('article.likedBy', 'likedBy')
       .leftJoinAndSelect('likedBy.user', 'user')
-      .select([
-        'article.id',
-        'article.title',
-        'article.content',
-        'article.imageUrl',
-        'article.createdAt',
-        'author.name',
-        'likedBy.userId',
-      ])
-      .getMany();
+      .select(['article', 'author', 'likedBy'])
+      .groupBy('article.id')
+      .addGroupBy('author.id')
+      .addGroupBy('likedBy.id')
+      .orderBy('article.createdAt', order)
+      .skip(skip)
+      .take(pageSize)
+      .getManyAndCount();
+
+    return {
+      articles: articles,
+      meta: {
+        total,
+        page,
+        lastPage: Math.ceil(total / pageSize),
+      },
+    };
+  }
+
+  async findPaginatedByLike(page: number = 1, order: 'ASC' | 'DESC' = 'DESC') {
+    const pageSize = 10;
+    const skip = (page - 1) * pageSize;
+    const [articles, total] = await this.articleRepository
+      .createQueryBuilder('article')
+      .leftJoinAndSelect('article.author', 'author')
+      .leftJoinAndSelect('article.likedBy', 'likedBy')
+      .leftJoinAndSelect('likedBy.user', 'user')
+      .select(['article', 'author', 'likedBy'])
+      .addSelect('COUNT(likedBy.id)', 'like_count')
+      .groupBy('article.id')
+      .addGroupBy('author.id')
+      .addGroupBy('likedBy.id')
+      .orderBy('like_count', order)
+      .skip(skip)
+      .take(pageSize)
+      .getManyAndCount();
+
+    return {
+      articles: articles,
+      meta: {
+        total,
+        page,
+        lastPage: Math.ceil(total / pageSize),
+      },
+    };
   }
 
   async findOne(articleId: number) {

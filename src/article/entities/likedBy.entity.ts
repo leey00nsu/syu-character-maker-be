@@ -1,3 +1,4 @@
+import { Exclude } from 'class-transformer';
 import { User } from 'src/user/entities/user.entity';
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Article } from './article.entity';
@@ -7,9 +8,11 @@ export class LikedBy {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Exclude({ toPlainOnly: true })
   @Column()
   userId: number;
 
+  @Exclude({ toPlainOnly: true })
   @Column()
   articleId: number;
 

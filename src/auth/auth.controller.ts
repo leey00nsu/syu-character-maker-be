@@ -16,6 +16,7 @@ import { SessionAuthGuard } from './guard/sessionAuth.guard';
 
 @Controller('auth')
 @UseFilters(HttpExceptionFilter)
+@UseInterceptors(ClassSerializerInterceptor)
 export class AuthController {
   constructor(
     private usersService: UsersService,
@@ -23,7 +24,6 @@ export class AuthController {
   ) {}
 
   @Post('google')
-  @UseInterceptors(ClassSerializerInterceptor)
   async googleAuth(@Query() query, @Session() session) {
     const { code } = query;
 
@@ -65,7 +65,6 @@ export class AuthController {
 
   @Get('user')
   @UseGuards(SessionAuthGuard)
-  @UseInterceptors(ClassSerializerInterceptor)
   async getUser(@Session() session) {
     console.log('user', new Date());
 

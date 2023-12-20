@@ -14,12 +14,6 @@ export class Article {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  title: string;
-
-  @Column()
-  content: string;
-
   @ManyToOne(() => User, (user) => user.articles)
   author: User;
 
