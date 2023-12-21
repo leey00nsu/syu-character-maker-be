@@ -14,6 +14,9 @@ export class Article {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column()
+  canvasName: string;
+
   @ManyToOne(() => User, (user) => user.articles)
   author: User;
 

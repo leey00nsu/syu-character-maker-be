@@ -1,9 +1,9 @@
 import {
+  Body,
   ClassSerializerInterceptor,
   Controller,
   Get,
   Param,
-  ParseIntPipe,
   Post,
   Query,
   Session,
@@ -13,12 +13,14 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { plainToInstance } from 'class-transformer';
 import { SessionAuthGuard } from 'src/auth/guard/sessionAuth.guard';
 import { SessionCheckInterceptor } from 'src/auth/interceptors/sessionCheck.interceptor';
 import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
 import { UsersService } from 'src/user/users.service';
 import { ArticleService } from './article.service';
-import { ListArticle } from './dtos/listArticle.dto';
+import { CreateArticleDto } from './dtos/createArticle.dto';
+import { ListArticleDto } from './dtos/listArticle.dto';
 
 @Controller('article')
 @UseFilters(HttpExceptionFilter)
@@ -35,6 +37,7 @@ export class ArticleController {
   async uploadArticle(
     @Session() session,
     @UploadedFile() file: Express.Multer.File,
+    @Body() body: CreateArticleDto,
   ) {
     const { id } = session.user;
 
@@ -43,6 +46,7 @@ export class ArticleController {
     const imageUrl = await this.articleService.uploadImageToBucket(file);
 
     const newArticle = {
+      canvasName: body.canvasName,
       imageUrl: imageUrl,
       author: user,
     };
@@ -75,11 +79,11 @@ export class ArticleController {
       const likeCount = article.likedBy.length;
       const presignedUrl = session.presignedUrl + article.imageUrl;
 
-      const listArticle = new ListArticle({
+      const listArticle = plainToInstance(ListArticleDto, {
         ...article,
+        imageUrl: presignedUrl,
         isLiked,
         likeCount,
-        presignedUrl,
       });
 
       return listArticle;
@@ -97,10 +101,7 @@ export class ArticleController {
 
   @Get(':articleId')
   @UseInterceptors(SessionCheckInterceptor)
-  async getArticle(
-    @Param('articleId', ParseIntPipe) articleId: number,
-    @Session() session,
-  ) {
+  async getArticle(@Param('articleId') articleId: number, @Session() session) {
     const article = await this.articleService.findOne(articleId);
 
     const isLogin = session.user ? true : false;
@@ -112,11 +113,11 @@ export class ArticleController {
     const likeCount = article.likedBy.length;
     const presignedUrl = session.presignedUrl + article.imageUrl;
 
-    const listArticle = new ListArticle({
+    const listArticle = plainToInstance(ListArticleDto, {
       ...article,
+      imageUrl: presignedUrl,
       isLiked,
       likeCount,
-      presignedUrl,
     });
 
     return {
@@ -130,7 +131,7 @@ export class ArticleController {
   @UseGuards(SessionAuthGuard)
   async toggleLikeArticle(
     @Session() session,
-    @Param('articleId', ParseIntPipe) articleId: number,
+    @Param('articleId') articleId: number,
   ) {
     const { id } = session.user;
 
