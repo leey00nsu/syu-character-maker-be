@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SessionAuthGuard } from 'src/auth/guard/sessionAuth.guard';
+import { SessionCheckInterceptor } from 'src/auth/interceptors/sessionCheck.interceptor';
 import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
 import { UsersService } from 'src/user/users.service';
 import { ArticleService } from './article.service';
@@ -52,6 +53,7 @@ export class ArticleController {
   }
 
   @Get('')
+  @UseInterceptors(SessionCheckInterceptor)
   async getArticleList(
     @Session() session,
     @Query('page') page: number,
@@ -64,17 +66,6 @@ export class ArticleController {
         : await this.articleService.findPaginatedByLike(page, order);
 
     const isLogin = session.user ? true : false;
-
-    const isExpired =
-      new Date().getTime() > Number(session.presignedUrlExpireTime);
-
-    // presignedUrl이 없거나 만료되었을 경우 새로 생성
-    if (!session.presignedUrl || isExpired) {
-      const [presignedUrl, timeExpires] =
-        await this.articleService.getPresignedUrl();
-      session.presignedUrl = presignedUrl;
-      session.presignedUrlExpireTime = timeExpires;
-    }
 
     // 게시글 리스트에 presignedUrl 붙여서 반환
     const articleListWithPresignedUrl = articleList.articles.map((article) => {
@@ -105,8 +96,34 @@ export class ArticleController {
   }
 
   @Get(':articleId')
-  async getArticle(@Param('articleId', ParseIntPipe) articleId: number) {
-    return await this.articleService.findOne(articleId);
+  @UseInterceptors(SessionCheckInterceptor)
+  async getArticle(
+    @Param('articleId', ParseIntPipe) articleId: number,
+    @Session() session,
+  ) {
+    const article = await this.articleService.findOne(articleId);
+
+    const isLogin = session.user ? true : false;
+
+    // 게시글 리스트에 presignedUrl 붙여서 반환
+    const isLiked = isLogin
+      ? article.likedBy.some((likedBy) => likedBy.userId === session.user.id)
+      : false;
+    const likeCount = article.likedBy.length;
+    const presignedUrl = session.presignedUrl + article.imageUrl;
+
+    const listArticle = new ListArticle({
+      ...article,
+      isLiked,
+      likeCount,
+      presignedUrl,
+    });
+
+    return {
+      statusCode: 200,
+      message: '모든 게시글 조회 성공!',
+      data: listArticle,
+    };
   }
 
   @Post(':articleId/like')

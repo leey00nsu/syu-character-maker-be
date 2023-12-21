@@ -10,12 +10,11 @@ import { LikedBy } from './entities/likedBy.entity';
 
 @Injectable()
 export class ArticleService {
+  private readonly ociProvider: common.ConfigFileAuthenticationDetailsProvider;
   constructor(
     @InjectRepository(Article) private articleRepository: Repository<Article>,
     @InjectRepository(LikedBy) private likedByRepository: Repository<LikedBy>,
-  ) {}
-
-  async uploadImageToBucket(file: Express.Multer.File) {
+  ) {
     // 오라클 클라우드 api config 파일 읽어오기
     const configurationFilePath = '~/.oci/config';
     const configProfile = 'DEFAULT';
@@ -25,10 +24,14 @@ export class ArticleService {
         configProfile,
       );
 
+    this.ociProvider = provider;
+  }
+
+  async uploadImageToBucket(file: Express.Multer.File) {
     const bucket: string = 'syucharactermaker-bucket';
     const objectUUID: string = crypto.randomUUID();
     const client = new os.ObjectStorageClient({
-      authenticationDetailsProvider: provider,
+      authenticationDetailsProvider: this.ociProvider,
     });
 
     try {
@@ -66,20 +69,11 @@ export class ArticleService {
   }
 
   async getPresignedUrl() {
-    // 오라클 클라우드 api config 파일 읽어오기
-    const configurationFilePath = '~/.oci/config';
-    const configProfile = 'DEFAULT';
-    const provider: common.ConfigFileAuthenticationDetailsProvider =
-      new common.ConfigFileAuthenticationDetailsProvider(
-        configurationFilePath,
-        configProfile,
-      );
-
     const bucket: string = 'syucharactermaker-bucket';
     const timeExpires = new Date(Date.now() + 1000 * 60 * 60); // 유효 시간 1시간
 
     const client = new os.ObjectStorageClient({
-      authenticationDetailsProvider: provider,
+      authenticationDetailsProvider: this.ociProvider,
     });
 
     try {
@@ -179,7 +173,18 @@ export class ArticleService {
   }
 
   async findOne(articleId: number) {
-    return this.articleRepository.findOne({ where: { id: articleId } });
+    return await this.articleRepository
+      .createQueryBuilder('article')
+      .where('article.id = :articleId', { articleId })
+      .leftJoinAndSelect('article.author', 'author')
+      .leftJoinAndSelect('article.likedBy', 'likedBy')
+      .leftJoinAndSelect('likedBy.user', 'user')
+      .select(['article', 'author', 'likedBy'])
+      .addSelect('COUNT(likedBy.id)', 'like_count')
+      .groupBy('article.id')
+      .addGroupBy('author.id')
+      .addGroupBy('likedBy.id')
+      .getOne();
   }
 
   async findLikedUser(articleId: number) {
