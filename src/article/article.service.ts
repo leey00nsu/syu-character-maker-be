@@ -210,4 +210,8 @@ export class ArticleService {
   async removeLikedBy(likedBy: LikedBy) {
     return this.likedByRepository.remove(likedBy);
   }
+
+  async removeArticle(article: Article) {
+    return this.articleRepository.remove(article);
+  }
 }

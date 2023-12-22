@@ -2,7 +2,10 @@ import {
   Body,
   ClassSerializerInterceptor,
   Controller,
+  Delete,
+  ForbiddenException,
   Get,
+  NotFoundException,
   Param,
   Post,
   Query,
@@ -76,11 +79,13 @@ export class ArticleController {
       const isLiked = isLogin
         ? article.likedBy.some((likedBy) => likedBy.userId === session.user.id)
         : false;
+      const isOwner = isLogin ? article.author.id === session.user.id : false;
       const likeCount = article.likedBy.length;
       const presignedUrl = session.presignedUrl + article.imageUrl;
 
       const listArticle = plainToInstance(ListArticleDto, {
         ...article,
+        isOwner,
         imageUrl: presignedUrl,
         isLiked,
         likeCount,
@@ -104,17 +109,23 @@ export class ArticleController {
   async getArticle(@Param('articleId') articleId: number, @Session() session) {
     const article = await this.articleService.findOne(articleId);
 
+    if (!article) {
+      throw new NotFoundException('존재하지 않는 게시글입니다.');
+    }
+
     const isLogin = session.user ? true : false;
 
     // 게시글 리스트에 presignedUrl 붙여서 반환
     const isLiked = isLogin
       ? article.likedBy.some((likedBy) => likedBy.userId === session.user.id)
       : false;
+    const isOwner = isLogin ? article.author.id === session.user.id : false;
     const likeCount = article.likedBy.length;
     const presignedUrl = session.presignedUrl + article.imageUrl;
 
     const listArticle = plainToInstance(ListArticleDto, {
       ...article,
+      isOwner,
       imageUrl: presignedUrl,
       isLiked,
       likeCount,
@@ -122,7 +133,7 @@ export class ArticleController {
 
     return {
       statusCode: 200,
-      message: '모든 게시글 조회 성공!',
+      message: '게시글 조회 성공!',
       data: listArticle,
     };
   }
@@ -154,5 +165,24 @@ export class ArticleController {
     console.log(user.name + '님이 ' + article.id + ' 좋아요!');
 
     return { statusCode: 200, message: '좋아요!' };
+  }
+
+  @Delete(':articleId')
+  @UseGuards(SessionAuthGuard)
+  async deleteArticle(
+    @Session() session,
+    @Param('articleId') articleId: number,
+  ) {
+    const { id } = session.user;
+
+    const article = await this.articleService.findOne(articleId);
+
+    if (article.author.id !== id) {
+      throw new ForbiddenException('권한이 없습니다.');
+    }
+
+    this.articleService.removeArticle(article);
+
+    return { statusCode: 200, message: '게시글 삭제 성공!' };
   }
 }

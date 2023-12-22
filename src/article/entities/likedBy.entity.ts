@@ -16,9 +16,13 @@ export class LikedBy {
   @Column()
   articleId: number;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, {
+    onDelete: 'CASCADE',
+  })
   user: User;
 
-  @ManyToOne(() => Article)
+  @ManyToOne(() => Article, {
+    onDelete: 'CASCADE',
+  })
   article: Article;
 }

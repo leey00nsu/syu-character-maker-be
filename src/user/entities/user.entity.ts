@@ -26,9 +26,13 @@ export class User {
   @Column()
   photo: string;
 
-  @OneToMany(() => Article, (article) => article.author)
+  @OneToMany(() => Article, (article) => article.author, {
+    cascade: true,
+  })
   articles: Article[];
 
-  @OneToMany(() => LikedBy, (likedBy) => likedBy.user)
+  @OneToMany(() => LikedBy, (likedBy) => likedBy.user, {
+    cascade: true,
+  })
   likedArticles: LikedBy[];
 }

@@ -17,13 +17,17 @@ export class Article {
   @Column()
   canvasName: string;
 
-  @ManyToOne(() => User, (user) => user.articles)
+  @ManyToOne(() => User, (user) => user.articles, {
+    onDelete: 'CASCADE',
+  })
   author: User;
 
   @Column()
   imageUrl: string;
 
-  @OneToMany(() => LikedBy, (likedBy) => likedBy.article)
+  @OneToMany(() => LikedBy, (likedBy) => likedBy.article, {
+    cascade: true,
+  })
   likedBy: LikedBy[];
 
   @CreateDateColumn({

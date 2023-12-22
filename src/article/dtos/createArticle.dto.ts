@@ -4,7 +4,7 @@ import { User } from 'src/user/entities/user.entity';
 export class CreateArticleDto {
   imageUrl: string;
 
-  @MaxLength(20)
+  @MaxLength(15)
   @IsString()
   canvasName: string;
 
