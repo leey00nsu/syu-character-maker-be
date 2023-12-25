@@ -55,7 +55,7 @@ export class AuthController {
   logout(@Session() session) {
     console.log('logout', new Date());
 
-    session.destroy();
+    session.user = null;
 
     return {
       statusCode: 200,

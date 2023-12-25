@@ -16,7 +16,8 @@ export class ArticleService {
     @InjectRepository(LikedBy) private likedByRepository: Repository<LikedBy>,
   ) {
     // 오라클 클라우드 api config 파일 읽어오기
-    const configurationFilePath = '~/.oci/config';
+    const configurationFilePath = process.env.OCI_CONFIG_FILE_PATH;
+    // const configurationFilePath = '~/.oci/config';
     const configProfile = 'DEFAULT';
     const provider: common.ConfigFileAuthenticationDetailsProvider =
       new common.ConfigFileAuthenticationDetailsProvider(

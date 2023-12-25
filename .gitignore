@@ -1,4 +1,7 @@
+Dockerfile
+.dockerignore
 .env
+.oci/
 
 
 # compiled output
