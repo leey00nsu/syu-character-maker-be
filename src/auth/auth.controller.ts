@@ -9,6 +9,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { instanceToPlain } from 'class-transformer';
 import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
 import { UsersService } from 'src/user/users.service';
 import { AuthService } from './auth.service';
@@ -46,7 +47,7 @@ export class AuthController {
     return {
       statusCode: 200,
       message: '구글 로그인에 성공하였습니다.',
-      data: user,
+      data: instanceToPlain(user, { groups: ['user'] }),
     };
   }
 
@@ -75,7 +76,7 @@ export class AuthController {
     return {
       statusCode: 200,
       message: '유저 정보를 정상적으로 가져왔습니다.',
-      data: user,
+      data: instanceToPlain(user, { groups: ['user'] }),
     };
   }
 }

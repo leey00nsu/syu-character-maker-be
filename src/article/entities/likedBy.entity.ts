@@ -8,11 +8,11 @@ export class LikedBy {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Exclude({ toPlainOnly: true })
+  @Exclude()
   @Column()
   userId: number;
 
-  @Exclude({ toPlainOnly: true })
+  @Exclude()
   @Column()
   articleId: number;
 

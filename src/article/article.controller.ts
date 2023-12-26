@@ -83,13 +83,17 @@ export class ArticleController {
       const likeCount = article.likedBy.length;
       const presignedUrl = session.presignedUrl + article.imageUrl;
 
-      const listArticle = plainToInstance(ListArticleDto, {
-        ...article,
-        isOwner,
-        imageUrl: presignedUrl,
-        isLiked,
-        likeCount,
-      });
+      const listArticle = plainToInstance(
+        ListArticleDto,
+        {
+          ...article,
+          isOwner,
+          imageUrl: presignedUrl,
+          isLiked,
+          likeCount,
+        },
+        { excludeExtraneousValues: true },
+      );
 
       return listArticle;
     });
@@ -123,13 +127,17 @@ export class ArticleController {
     const likeCount = article.likedBy.length;
     const presignedUrl = session.presignedUrl + article.imageUrl;
 
-    const listArticle = plainToInstance(ListArticleDto, {
-      ...article,
-      isOwner,
-      imageUrl: presignedUrl,
-      isLiked,
-      likeCount,
-    });
+    const listArticle = plainToInstance(
+      ListArticleDto,
+      {
+        ...article,
+        isOwner,
+        imageUrl: presignedUrl,
+        isLiked,
+        likeCount,
+      },
+      { excludeExtraneousValues: true },
+    );
 
     return {
       statusCode: 200,

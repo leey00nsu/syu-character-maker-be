@@ -36,8 +36,9 @@ async function bootstrap() {
       store: redisClinet,
       secret: process.env.SESSION_SECRET,
       resave: false,
+      proxy: true,
       saveUninitialized: false,
-      cookie: { httpOnly: true, secure: false },
+      cookie: { httpOnly: true, secure: true, sameSite: 'none' },
     }),
   );
 
