@@ -8,6 +8,8 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  console.log(process.env.NODE_ENV);
+
   const redis = new Redis({
     host: process.env.REDIS_HOST,
     port: Number(process.env.REDIS_PORT),
@@ -36,9 +38,13 @@ async function bootstrap() {
       store: redisClinet,
       secret: process.env.SESSION_SECRET,
       resave: false,
-      proxy: true,
+      proxy: process.env.NODE_ENV === 'dev' ? false : true,
       saveUninitialized: false,
-      cookie: { httpOnly: true, secure: true, sameSite: 'none' },
+      cookie: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'dev' ? false : true,
+        sameSite: process.env.NODE_ENV === 'dev' ? false : 'none',
+      },
     }),
   );
 
