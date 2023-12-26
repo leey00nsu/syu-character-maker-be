@@ -126,10 +126,6 @@ export class ArticleService {
       .leftJoinAndSelect('article.author', 'author')
       .leftJoinAndSelect('article.likedBy', 'likedBy')
       .leftJoinAndSelect('likedBy.user', 'user')
-      .select(['article', 'author', 'likedBy'])
-      .groupBy('article.id')
-      .addGroupBy('author.id')
-      .addGroupBy('likedBy.id')
       .orderBy('article.createdAt', order)
       .skip(skip)
       .take(pageSize)
@@ -153,11 +149,12 @@ export class ArticleService {
       .leftJoinAndSelect('article.author', 'author')
       .leftJoinAndSelect('article.likedBy', 'likedBy')
       .leftJoinAndSelect('likedBy.user', 'user')
-      .select(['article', 'author', 'likedBy'])
-      .addSelect('COUNT(likedBy.id)', 'like_count')
-      .groupBy('article.id')
-      .addGroupBy('author.id')
-      .addGroupBy('likedBy.id')
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(liked_by.id)', 'like_count')
+          .from(LikedBy, 'liked_by')
+          .where('liked_by.articleId = article.id');
+      }, 'like_count')
       .orderBy('like_count', order)
       .skip(skip)
       .take(pageSize)
@@ -180,11 +177,6 @@ export class ArticleService {
       .leftJoinAndSelect('article.author', 'author')
       .leftJoinAndSelect('article.likedBy', 'likedBy')
       .leftJoinAndSelect('likedBy.user', 'user')
-      .select(['article', 'author', 'likedBy'])
-      .addSelect('COUNT(likedBy.id)', 'like_count')
-      .groupBy('article.id')
-      .addGroupBy('author.id')
-      .addGroupBy('likedBy.id')
       .getOne();
   }
 
