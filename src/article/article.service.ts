@@ -170,6 +170,29 @@ export class ArticleService {
     };
   }
 
+  async findPaginatedLiked(page: number = 1) {
+    const pageSize = 10;
+    const skip = (page - 1) * pageSize;
+    const [articles, total] = await this.articleRepository
+      .createQueryBuilder('article')
+      .leftJoinAndSelect('article.author', 'author')
+      .leftJoinAndSelect('article.likedBy', 'likedBy')
+      .leftJoinAndSelect('likedBy.user', 'user')
+      .orderBy('article.createdAt', 'DESC')
+      .skip(skip)
+      .take(pageSize)
+      .getManyAndCount();
+
+    return {
+      articles: articles,
+      meta: {
+        total,
+        page,
+        lastPage: Math.ceil(total / pageSize),
+      },
+    };
+  }
+
   async findOne(articleId: number) {
     return await this.articleRepository
       .createQueryBuilder('article')

@@ -8,8 +8,6 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  console.log(process.env.NODE_ENV);
-
   const redis = new Redis({
     host: process.env.REDIS_HOST,
     port: Number(process.env.REDIS_PORT),

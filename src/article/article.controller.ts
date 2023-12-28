@@ -48,11 +48,11 @@ export class ArticleController {
 
     const imageUrl = await this.articleService.uploadImageToBucket(file);
 
-    const newArticle = {
+    const newArticle = plainToInstance(CreateArticleDto, {
       canvasName: body.canvasName,
       imageUrl: imageUrl,
       author: user,
-    };
+    });
 
     this.articleService.createArticle(newArticle);
 
@@ -92,7 +92,7 @@ export class ArticleController {
           isLiked,
           likeCount,
         },
-        { excludeExtraneousValues: true },
+        { excludeExtraneousValues: true, groups: ['masked'] },
       );
 
       return listArticle;
@@ -131,12 +131,13 @@ export class ArticleController {
       ListArticleDto,
       {
         ...article,
+        user: article.author,
         isOwner,
         imageUrl: presignedUrl,
         isLiked,
         likeCount,
       },
-      { excludeExtraneousValues: true },
+      { excludeExtraneousValues: true, groups: ['masked'] },
     );
 
     return {

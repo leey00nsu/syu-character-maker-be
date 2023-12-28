@@ -1,4 +1,4 @@
-import { Exclude, Expose } from 'class-transformer';
+import { Exclude, Expose, Transform } from 'class-transformer';
 import { Article } from 'src/article/entities/article.entity';
 import { LikedBy } from 'src/article/entities/likedBy.entity';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
@@ -18,6 +18,12 @@ export class User {
   providerId: string;
 
   @Expose()
+  @Transform(
+    ({ value }) => {
+      return value ? `${value.charAt(0)}***` : null;
+    },
+    { groups: ['masked'] },
+  )
   @Column()
   name: string;
 
