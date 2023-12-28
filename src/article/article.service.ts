@@ -1,4 +1,9 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as crypto from 'crypto';
 import { common, objectstorage as os } from 'oci-sdk';
@@ -118,7 +123,12 @@ export class ArticleService {
     }
   }
 
-  async findPaginatedByDate(page: number = 1, order: 'ASC' | 'DESC' = 'DESC') {
+  async findPaginatedByDate(
+    page: number = 1,
+    order: 'ASC' | 'DESC' = 'DESC',
+    author: boolean,
+    userId: number,
+  ) {
     const pageSize = 10;
     const skip = (page - 1) * pageSize;
     const [articles, total] = await this.articleRepository
@@ -126,6 +136,7 @@ export class ArticleService {
       .leftJoinAndSelect('article.author', 'author')
       .leftJoinAndSelect('article.likedBy', 'likedBy')
       .leftJoinAndSelect('likedBy.user', 'user')
+      .where(author ? 'author.id = :userId' : '1=1', { userId })
       .orderBy('article.createdAt', order)
       .skip(skip)
       .take(pageSize)
@@ -141,7 +152,12 @@ export class ArticleService {
     };
   }
 
-  async findPaginatedByLike(page: number = 1, order: 'ASC' | 'DESC' = 'DESC') {
+  async findPaginatedByLike(
+    page: number = 1,
+    order: 'ASC' | 'DESC' = 'DESC',
+    author: boolean,
+    userId: number,
+  ) {
     const pageSize = 10;
     const skip = (page - 1) * pageSize;
     const [articles, total] = await this.articleRepository
@@ -155,6 +171,7 @@ export class ArticleService {
           .from(LikedBy, 'liked_by')
           .where('liked_by.articleId = article.id');
       }, 'like_count')
+      .where(author ? 'author.id = :userId' : '1=1', { userId })
       .orderBy('like_count', order)
       .skip(skip)
       .take(pageSize)
@@ -170,7 +187,7 @@ export class ArticleService {
     };
   }
 
-  async findPaginatedLiked(page: number = 1) {
+  async findPaginatedLiked(page: number = 1, userId: number) {
     const pageSize = 10;
     const skip = (page - 1) * pageSize;
     const [articles, total] = await this.articleRepository
@@ -178,6 +195,7 @@ export class ArticleService {
       .leftJoinAndSelect('article.author', 'author')
       .leftJoinAndSelect('article.likedBy', 'likedBy')
       .leftJoinAndSelect('likedBy.user', 'user')
+      .where('likedBy.userId = :userId', { userId })
       .orderBy('article.createdAt', 'DESC')
       .skip(skip)
       .take(pageSize)
@@ -194,13 +212,19 @@ export class ArticleService {
   }
 
   async findOne(articleId: number) {
-    return await this.articleRepository
+    const article = await this.articleRepository
       .createQueryBuilder('article')
       .where('article.id = :articleId', { articleId })
       .leftJoinAndSelect('article.author', 'author')
       .leftJoinAndSelect('article.likedBy', 'likedBy')
       .leftJoinAndSelect('likedBy.user', 'user')
       .getOne();
+
+    if (!article) {
+      throw new NotFoundException('존재하지 않는 게시글입니다.');
+    }
+
+    return article;
   }
 
   async findLikedUser(articleId: number) {

@@ -22,7 +22,7 @@ export class ListArticleDto {
   likeCount: number;
 
   @Expose()
-  isOwner: boolean;
+  isAuthor: boolean;
 
   @Expose()
   createdAt: Date;

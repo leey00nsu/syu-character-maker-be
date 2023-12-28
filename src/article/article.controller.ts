@@ -5,7 +5,6 @@ import {
   Delete,
   ForbiddenException,
   Get,
-  NotFoundException,
   Param,
   Post,
   Query,
@@ -20,6 +19,7 @@ import { plainToInstance } from 'class-transformer';
 import { SessionAuthGuard } from 'src/auth/guard/sessionAuth.guard';
 import { SessionCheckInterceptor } from 'src/auth/interceptors/sessionCheck.interceptor';
 import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
+import { User } from 'src/user/entities/user.entity';
 import { UsersService } from 'src/user/users.service';
 import { ArticleService } from './article.service';
 import { CreateArticleDto } from './dtos/createArticle.dto';
@@ -42,17 +42,17 @@ export class ArticleController {
     @UploadedFile() file: Express.Multer.File,
     @Body() body: CreateArticleDto,
   ) {
-    const { id } = session.user;
+    const { id }: User = session.user;
 
     const user = await this.usersService.findOne(id);
 
     const imageUrl = await this.articleService.uploadImageToBucket(file);
 
-    const newArticle = plainToInstance(CreateArticleDto, {
+    const newArticle: CreateArticleDto = {
       canvasName: body.canvasName,
       imageUrl: imageUrl,
       author: user,
-    });
+    };
 
     this.articleService.createArticle(newArticle);
 
@@ -66,20 +66,33 @@ export class ArticleController {
     @Query('page') page: number,
     @Query('orderBy') orderBy: 'date' | 'like',
     @Query('order') order: 'ASC' | 'DESC',
+    @Query('author') author: boolean,
   ) {
+    const isLogin = session.user ? true : false;
+
+    const { id: userId }: User = session.user ?? {};
+
     const articleList =
       orderBy === 'date'
-        ? await this.articleService.findPaginatedByDate(page, order)
-        : await this.articleService.findPaginatedByLike(page, order);
-
-    const isLogin = session.user ? true : false;
+        ? await this.articleService.findPaginatedByDate(
+            page,
+            order,
+            author,
+            userId,
+          )
+        : await this.articleService.findPaginatedByLike(
+            page,
+            order,
+            author,
+            userId,
+          );
 
     // 게시글 리스트에 presignedUrl 붙여서 반환
     const articleListWithPresignedUrl = articleList.articles.map((article) => {
       const isLiked = isLogin
-        ? article.likedBy.some((likedBy) => likedBy.userId === session.user.id)
+        ? article.likedBy.some((likedBy) => likedBy.userId === userId)
         : false;
-      const isOwner = isLogin ? article.author.id === session.user.id : false;
+      const isAuthor = isLogin ? article.author.id === userId : false;
       const likeCount = article.likedBy.length;
       const presignedUrl = session.presignedUrl + article.imageUrl;
 
@@ -87,12 +100,12 @@ export class ArticleController {
         ListArticleDto,
         {
           ...article,
-          isOwner,
+          isAuthor,
           imageUrl: presignedUrl,
           isLiked,
           likeCount,
         },
-        { excludeExtraneousValues: true, groups: ['masked'] },
+        { excludeExtraneousValues: true, groups: isAuthor ? [] : ['masked'] },
       );
 
       return listArticle;
@@ -113,17 +126,13 @@ export class ArticleController {
   async getArticle(@Param('articleId') articleId: number, @Session() session) {
     const article = await this.articleService.findOne(articleId);
 
-    if (!article) {
-      throw new NotFoundException('존재하지 않는 게시글입니다.');
-    }
-
     const isLogin = session.user ? true : false;
 
     // 게시글 리스트에 presignedUrl 붙여서 반환
     const isLiked = isLogin
       ? article.likedBy.some((likedBy) => likedBy.userId === session.user.id)
       : false;
-    const isOwner = isLogin ? article.author.id === session.user.id : false;
+    const isAuthor = isLogin ? article.author.id === session.user.id : false;
     const likeCount = article.likedBy.length;
     const presignedUrl = session.presignedUrl + article.imageUrl;
 
@@ -132,12 +141,12 @@ export class ArticleController {
       {
         ...article,
         user: article.author,
-        isOwner,
+        isAuthor,
         imageUrl: presignedUrl,
         isLiked,
         likeCount,
       },
-      { excludeExtraneousValues: true, groups: ['masked'] },
+      { excludeExtraneousValues: true, groups: isAuthor ? [] : ['masked'] },
     );
 
     return {
