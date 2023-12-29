@@ -72,6 +72,10 @@ export class ArticleController {
 
     const { id: userId }: User = session.user ?? {};
 
+    if (author && !isLogin) {
+      throw new ForbiddenException('권한이 없습니다.');
+    }
+
     const articleList =
       orderBy === 'date'
         ? await this.articleService.findPaginatedByDate(
