@@ -2,19 +2,17 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import RedisStore from 'connect-redis';
 import * as session from 'express-session';
-import Redis from 'ioredis';
 import { AppModule } from './app.module';
+import { RedisModule } from './redis/redis.module';
+import { RedisService } from './redis/redis.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const redis = new Redis({
-    host: process.env.REDIS_HOST,
-    port: Number(process.env.REDIS_PORT),
-  });
+  const redisService = app.select(RedisModule).get(RedisService);
 
-  const redisClinet = new RedisStore({
-    client: redis,
+  const redisClient = new RedisStore({
+    client: await redisService.getClient(),
     prefix: 'session:',
   });
 
@@ -33,7 +31,7 @@ async function bootstrap() {
 
   app.use(
     session({
-      store: redisClinet,
+      store: redisClient,
       secret: process.env.SESSION_SECRET,
       resave: false,
       proxy: process.env.NODE_ENV === 'dev' ? false : true,

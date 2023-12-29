@@ -5,6 +5,8 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  HttpException,
+  HttpStatus,
   Param,
   Post,
   Query,
@@ -21,6 +23,7 @@ import { SessionCheckInterceptor } from 'src/auth/interceptors/sessionCheck.inte
 import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
 import { User } from 'src/user/entities/user.entity';
 import { UsersService } from 'src/user/users.service';
+import { ArticleLimitService } from './article-limit.service';
 import { ArticleService } from './article.service';
 import { CreateArticleDto } from './dtos/createArticle.dto';
 import { ListArticleDto } from './dtos/listArticle.dto';
@@ -32,6 +35,7 @@ export class ArticleController {
   constructor(
     private articleService: ArticleService,
     private usersService: UsersService,
+    private articleLimitService: ArticleLimitService,
   ) {}
 
   @Post('upload')
@@ -44,6 +48,15 @@ export class ArticleController {
   ) {
     const { id }: User = session.user;
 
+    const isUploadAvailable = await this.articleLimitService.isAvailable(id);
+
+    if (!isUploadAvailable) {
+      throw new HttpException(
+        '하루 업로드 제한을 초과하였습니다.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
     const user = await this.usersService.findOne(id);
 
     const imageUrl = await this.articleService.uploadImageToBucket(file);
@@ -54,7 +67,8 @@ export class ArticleController {
       author: user,
     };
 
-    this.articleService.createArticle(newArticle);
+    await this.articleService.createArticle(newArticle);
+    await this.articleLimitService.increasaeLimitCount(id);
 
     return { statusCode: 200, message: '게시글 업로드 성공!' };
   }
@@ -173,7 +187,7 @@ export class ArticleController {
     const likedBy = await this.articleService.findLikedBy(id, articleId);
 
     if (likedBy) {
-      this.articleService.removeLikedBy(likedBy);
+      await this.articleService.removeLikedBy(likedBy);
       console.log(user.name + '님이 ' + article.id + ' 좋아요 취소!');
       return { statusCode: 200, message: '좋아요 취소!' };
     }
@@ -183,7 +197,7 @@ export class ArticleController {
       article: article,
     };
 
-    this.articleService.createLikedBy(newLikedBy);
+    await this.articleService.createLikedBy(newLikedBy);
     console.log(user.name + '님이 ' + article.id + ' 좋아요!');
 
     return { statusCode: 200, message: '좋아요!' };
@@ -203,7 +217,7 @@ export class ArticleController {
       throw new ForbiddenException('권한이 없습니다.');
     }
 
-    this.articleService.removeArticle(article);
+    await this.articleService.removeArticle(article);
 
     return { statusCode: 200, message: '게시글 삭제 성공!' };
   }
