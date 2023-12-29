@@ -40,6 +40,7 @@ async function bootstrap() {
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
+        maxAge: 1000 * 60 * 60 * 24, // 1일 ,
         secure: process.env.NODE_ENV === 'dev' ? false : true,
         sameSite: process.env.NODE_ENV === 'dev' ? false : 'none',
       },
