@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   ClassSerializerInterceptor,
   Controller,
@@ -139,9 +140,29 @@ export class ArticleController {
     };
   }
 
+  @Get('limit')
+  @UseGuards(SessionAuthGuard)
+  async getArticleLimit(@Session() session) {
+    const { id } = session.user;
+
+    const availableCount = await this.articleLimitService.getAvailableCount(id);
+    const maxLimit = this.articleLimitService.getMaxLimit();
+    const isAvailable = await this.articleLimitService.isAvailable(id);
+
+    return {
+      statusCode: 200,
+      message: '게시글 업로드 제한 조회 성공!',
+      data: { availableCount, maxLimit, isAvailable },
+    };
+  }
+
   @Get(':articleId')
   @UseInterceptors(SessionCheckInterceptor)
   async getArticle(@Param('articleId') articleId: number, @Session() session) {
+    if (Number.isNaN(articleId)) {
+      throw new BadRequestException('articleId는 숫자여야 합니다.');
+    }
+
     const article = await this.articleService.findOne(articleId);
 
     const isLogin = session.user ? true : false;

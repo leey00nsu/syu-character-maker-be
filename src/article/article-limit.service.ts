@@ -9,12 +9,14 @@ dayjs.extend(timezone);
 
 @Injectable()
 export class ArticleLimitService {
+  private readonly MAX_LIMIT_COUNT = 5;
+
   constructor(private redisService: RedisService) {}
 
   async isAvailable(userId: number) {
-    const currentLimit = await this.getLimitCount(userId);
+    const availableCount = await this.getAvailableCount(userId);
 
-    return currentLimit < 5;
+    return availableCount > 0;
   }
 
   async increasaeLimitCount(userId: number) {
@@ -46,14 +48,19 @@ export class ArticleLimitService {
     return limit === null ? 0 : Number(limit);
   }
 
+  async getAvailableCount(userId: number) {
+    const maxLimit = this.getMaxLimit();
+    const currentLimitCount = await this.getLimitCount(userId);
+
+    return maxLimit - currentLimitCount;
+  }
+
   async resetLimitCount(userId: number) {
     const client = await this.redisService.getClient();
 
     const key = `article-limit-${userId}`;
 
-    const limit = await client.set(key, 0);
-
-    return limit;
+    await client.set(key, 0);
   }
 
   getExpireTime() {
@@ -64,5 +71,9 @@ export class ArticleLimitService {
     const secondUntilMidnight = midnight.diff(now, 'second');
 
     return secondUntilMidnight;
+  }
+
+  getMaxLimit() {
+    return this.MAX_LIMIT_COUNT;
   }
 }
