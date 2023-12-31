@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { instanceToPlain } from 'class-transformer';
 import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
-import { UsersService } from 'src/user/users.service';
+import { UserService } from 'src/user/user.service';
 import { AuthService } from './auth.service';
 import { SessionAuthGuard } from './guard/sessionAuth.guard';
 
@@ -20,7 +20,7 @@ import { SessionAuthGuard } from './guard/sessionAuth.guard';
 @UseInterceptors(ClassSerializerInterceptor)
 export class AuthController {
   constructor(
-    private usersService: UsersService,
+    private userService: UserService,
     private authService: AuthService,
   ) {}
 
@@ -33,11 +33,11 @@ export class AuthController {
 
     const { providerId } = profile;
 
-    let user = await this.usersService.findOneByProviderId(providerId);
+    let user = await this.userService.findOneByProviderId(providerId);
 
     if (!user) {
       console.log('유저가 존재하지 않습니다, 새로 만듭니다.');
-      user = await this.usersService.create(profile);
+      user = await this.userService.create(profile);
     }
 
     session.user = user;
@@ -71,7 +71,7 @@ export class AuthController {
 
     const { id } = session.user;
 
-    const user = await this.usersService.findOne(id);
+    const user = await this.userService.findOne(id);
 
     return {
       statusCode: 200,

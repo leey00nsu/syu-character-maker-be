@@ -6,28 +6,28 @@ import { CreateUserDto } from './dtos/createUser.dto';
 import { User } from './entities/user.entity';
 
 @Injectable()
-export class UsersService {
+export class UserService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
   ) {}
 
   async findAll() {
-    return this.usersRepository.find();
+    return await this.usersRepository.find();
   }
 
   async findOne(id: number) {
-    return this.usersRepository.findOne({ where: { id } });
+    return await this.usersRepository.findOne({ where: { id } });
   }
 
   async findOneByProviderId(providerId: string) {
-    return this.usersRepository.findOne({ where: { providerId } });
+    return await this.usersRepository.findOne({ where: { providerId } });
   }
 
   async create(profile: CreateUserDto) {
     const newUser = this.usersRepository.create(profile);
 
-    return this.usersRepository.save(newUser);
+    return await this.usersRepository.save(newUser);
   }
 
   async remove(id: number) {

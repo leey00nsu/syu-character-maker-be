@@ -4,7 +4,7 @@ import { LikedBy } from 'src/article/entities/likedBy.entity';
 import { SessionCheckInterceptor } from 'src/auth/interceptors/sessionCheck.interceptor';
 import { RedisService } from 'src/redis/redis.service';
 import { User } from 'src/user/entities/user.entity';
-import { UsersService } from 'src/user/users.service';
+import { UserService } from 'src/user/user.service';
 import { ArticleLimitService } from './article-limit.service';
 import { ArticleController } from './article.controller';
 import { ArticleService } from './article.service';
@@ -17,7 +17,7 @@ import { Article } from './entities/article.entity';
     RedisService,
     ArticleService,
     ArticleLimitService,
-    UsersService,
+    UserService,
     {
       provide: 'APP_INTERCEPTOR',
       useClass: SessionCheckInterceptor,

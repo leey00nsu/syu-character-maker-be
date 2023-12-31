@@ -68,7 +68,7 @@ export class ArticleService {
     return objectUUID;
   }
 
-  async createArticle(article: CreateArticleDto) {
+  createArticle(article: CreateArticleDto) {
     const newArticle = this.articleRepository.create(article);
 
     return this.articleRepository.save(newArticle);
@@ -228,7 +228,7 @@ export class ArticleService {
   }
 
   async findLikedUser(articleId: number) {
-    return this.likedByRepository
+    return await this.likedByRepository
       .createQueryBuilder('likedBy')
       .select('likedBy.userId')
       .where('likedBy.articleId = :articleId', { articleId })
@@ -238,20 +238,24 @@ export class ArticleService {
   async createLikedBy(likedBy: CreateLikedbyDto) {
     const newLikedBy = this.likedByRepository.create(likedBy);
 
-    return this.likedByRepository.save(newLikedBy);
+    return await this.likedByRepository.save(newLikedBy);
   }
 
   async findLikedBy(userId: number, articleId: number) {
-    return this.likedByRepository.findOne({
+    return await this.likedByRepository.findOne({
       where: { user: { id: userId }, article: { id: articleId } },
     });
   }
 
   async removeLikedBy(likedBy: LikedBy) {
-    return this.likedByRepository.remove(likedBy);
+    return await this.likedByRepository.remove(likedBy);
   }
 
   async removeArticle(article: Article) {
-    return this.articleRepository.remove(article);
+    return await this.articleRepository.remove(article);
+  }
+
+  async findAll() {
+    return await this.articleRepository.find();
   }
 }

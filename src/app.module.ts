@@ -9,7 +9,7 @@ import { LikedBy } from './article/entities/likedBy.entity';
 import { AuthModule } from './auth/auth.module';
 import { RedisModule } from './redis/redis.module';
 import { User } from './user/entities/user.entity';
-import { UsersModule } from './user/users.module';
+import { UsersModule } from './user/user.module';
 import { ArticleLimitService } from './article/article-limit.service';
 
 @Module({

@@ -23,7 +23,7 @@ import { SessionAuthGuard } from 'src/auth/guard/sessionAuth.guard';
 import { SessionCheckInterceptor } from 'src/auth/interceptors/sessionCheck.interceptor';
 import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
 import { User } from 'src/user/entities/user.entity';
-import { UsersService } from 'src/user/users.service';
+import { UserService } from 'src/user/user.service';
 import { ArticleLimitService } from './article-limit.service';
 import { ArticleService } from './article.service';
 import { CreateArticleDto } from './dtos/createArticle.dto';
@@ -35,7 +35,7 @@ import { ListArticleDto } from './dtos/listArticle.dto';
 export class ArticleController {
   constructor(
     private articleService: ArticleService,
-    private usersService: UsersService,
+    private userService: UserService,
     private articleLimitService: ArticleLimitService,
   ) {}
 
@@ -58,7 +58,7 @@ export class ArticleController {
       );
     }
 
-    const user = await this.usersService.findOne(id);
+    const user = await this.userService.findOne(id);
 
     const imageUrl = await this.articleService.uploadImageToBucket(file);
 
@@ -156,11 +156,24 @@ export class ArticleController {
     };
   }
 
+  @Get('total')
+  async getTotalArticleCount() {
+    const totalArticles = await this.articleService.findAll();
+
+    const totalArticleCount = totalArticles.length;
+
+    return {
+      statusCode: 200,
+      message: '전체 게시글 수 조회 성공!',
+      data: { count: totalArticleCount },
+    };
+  }
+
   @Get(':articleId')
   @UseInterceptors(SessionCheckInterceptor)
   async getArticle(@Param('articleId') articleId: number, @Session() session) {
     if (Number.isNaN(articleId)) {
-      throw new BadRequestException('articleId는 숫자여야 합니다.');
+      throw new BadRequestException('잘못된 요청입니다.');
     }
 
     const article = await this.articleService.findOne(articleId);
@@ -203,7 +216,7 @@ export class ArticleController {
   ) {
     const { id } = session.user;
 
-    const user = await this.usersService.findOne(id);
+    const user = await this.userService.findOne(id);
     const article = await this.articleService.findOne(articleId);
     const likedBy = await this.articleService.findLikedBy(id, articleId);
 
