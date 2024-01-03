@@ -79,7 +79,7 @@ export class ArticleController {
   async getArticleList(
     @Session() session,
     @Query('page') page: number,
-    @Query('orderBy') orderBy: 'date' | 'like',
+    @Query('orderBy') orderBy: 'date' | 'likeCount',
     @Query('order') order: 'ASC' | 'DESC',
     @Query('author') author: boolean,
   ) {
