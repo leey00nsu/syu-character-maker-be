@@ -1,14 +1,19 @@
 import {
   CallHandler,
   ExecutionContext,
+  Inject,
   Injectable,
   NestInterceptor,
+  forwardRef,
 } from '@nestjs/common';
 import { ArticleService } from 'src/article/article.service';
 
 @Injectable()
 export class SessionCheckInterceptor implements NestInterceptor {
-  constructor(private articleService: ArticleService) {}
+  constructor(
+    @Inject(forwardRef(() => ArticleService))
+    private articleService: ArticleService,
+  ) {}
   async intercept(context: ExecutionContext, next: CallHandler) {
     const request = context.switchToHttp().getRequest();
 

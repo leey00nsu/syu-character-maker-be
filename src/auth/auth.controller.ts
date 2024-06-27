@@ -2,12 +2,14 @@ import {
   ClassSerializerInterceptor,
   Controller,
   Get,
+  Inject,
   Post,
   Query,
   Session,
   UseFilters,
   UseGuards,
   UseInterceptors,
+  forwardRef,
 } from '@nestjs/common';
 import { instanceToPlain } from 'class-transformer';
 import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
@@ -20,6 +22,7 @@ import { SessionAuthGuard } from './guard/sessionAuth.guard';
 @UseInterceptors(ClassSerializerInterceptor)
 export class AuthController {
   constructor(
+    @Inject(forwardRef(() => UserService))
     private userService: UserService,
     private authService: AuthService,
   ) {}

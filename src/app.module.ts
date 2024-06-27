@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ArticleLimitService } from './article/article-limit.service';
 import { ArticleModule } from './article/article.module';
 import { AuthModule } from './auth/auth.module';
 
@@ -35,6 +34,6 @@ import { UsersModule } from './user/user.module';
     RedisModule,
   ],
   controllers: [AppController],
-  providers: [AppService, ArticleLimitService],
+  providers: [AppService],
 })
 export class AppModule {}

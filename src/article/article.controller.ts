@@ -8,6 +8,7 @@ import {
   Get,
   HttpException,
   HttpStatus,
+  Inject,
   Param,
   Post,
   Query,
@@ -16,6 +17,7 @@ import {
   UseFilters,
   UseGuards,
   UseInterceptors,
+  forwardRef,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { plainToInstance } from 'class-transformer';
@@ -35,7 +37,9 @@ import { ListArticleDto } from './dtos/listArticle.dto';
 export class ArticleController {
   constructor(
     private articleService: ArticleService,
+    @Inject(forwardRef(() => UserService))
     private userService: UserService,
+    @Inject(forwardRef(() => ArticleLimitService))
     private articleLimitService: ArticleLimitService,
   ) {}
 
