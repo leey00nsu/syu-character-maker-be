@@ -24,7 +24,7 @@ import { UsersModule } from './user/user.module';
         port: +configService.get('POSTGRES_PORT'),
         username: configService.get('POSTGRES_USER'),
         password: configService.get('POSTGRES_PASSWORD'),
-        database: 'syu-character-maker',
+        database: configService.get('POSTGRES_DB'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
       }),
     }),
