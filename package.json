@@ -31,6 +31,7 @@
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/typeorm": "^10.0.1",
+    "@prisma/client": "^5.16.1",
     "@types/express-session": "^1.17.10",
     "axios": "^1.6.2",
     "class-transformer": "^0.5.1",
@@ -43,6 +44,7 @@
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "pg": "^8.11.3",
+    "prisma": "^5.16.1",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.17"

@@ -2,7 +2,8 @@ Dockerfile
 .dockerignore
 .env
 .oci/
-
+docker-compose.yml
+backups/
 
 # compiled output
 /dist

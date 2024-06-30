@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model article {
+  id         Int        @id @default(autoincrement())
+  canvasName String     @db.VarChar
+  imageUrl   String     @db.VarChar
+  createdAt  DateTime   @default(now()) @db.Timestamptz(6)
+  authorId   Int?
+  user       user?      @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  liked_by   liked_by[]
+}
+
+model liked_by {
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  articleId Int
+  article   article @relation(fields: [articleId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user      user    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model user {
+  id         Int        @id @default(autoincrement())
+  provider   String     @db.VarChar
+  providerId String     @db.VarChar
+  name       String     @db.VarChar
+  email      String     @db.VarChar
+  photo      String     @db.VarChar
+  article    article[]
+  liked_by   liked_by[]
+}
