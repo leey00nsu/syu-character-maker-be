@@ -7,7 +7,9 @@ import { RedisModule } from './redis/redis.module';
 import { RedisService } from './redis/redis.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+  });
 
   app.enableCors({
     origin: process.env.CLIENT_URL,
@@ -47,4 +49,5 @@ async function bootstrap() {
 
   await app.listen(3000);
 }
+
 bootstrap();
