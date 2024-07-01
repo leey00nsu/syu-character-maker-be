@@ -11,7 +11,7 @@ import {
   UseInterceptors,
   forwardRef,
 } from '@nestjs/common';
-import { instanceToPlain } from 'class-transformer';
+import { User } from '@prisma/client';
 import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
 import { UserService } from 'src/user/user.service';
 import { AuthService } from './auth.service';
@@ -47,10 +47,16 @@ export class AuthController {
 
     console.log('googleLogin', new Date());
 
+    const excludedUser = {
+      name: user.name,
+      email: user.email,
+      photo: user.photo,
+    };
+
     return {
       statusCode: 200,
       message: '구글 로그인에 성공하였습니다.',
-      data: instanceToPlain(user, { groups: ['user'] }),
+      data: excludedUser,
     };
   }
 
@@ -72,14 +78,20 @@ export class AuthController {
   async getUser(@Session() session) {
     console.log('user', new Date());
 
-    const { id } = session.user;
+    const { id: userId }: User = session.user;
 
-    const user = await this.userService.findOne(id);
+    const user = await this.userService.findOne(userId);
+
+    const excludedUser = {
+      name: user.name,
+      email: user.email,
+      photo: user.photo,
+    };
 
     return {
       statusCode: 200,
       message: '유저 정보를 정상적으로 가져왔습니다.',
-      data: instanceToPlain(user, { groups: ['user'] }),
+      data: excludedUser,
     };
   }
 }

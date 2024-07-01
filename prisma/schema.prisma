@@ -7,31 +7,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model article {
-  id         Int        @id @default(autoincrement())
-  canvasName String     @db.VarChar
-  imageUrl   String     @db.VarChar
-  createdAt  DateTime   @default(now()) @db.Timestamptz(6)
+model Article {
+  id         Int       @id(map: "PK_40808690eb7b915046558c0f81b") @default(autoincrement())
+  canvasName String    @db.VarChar
+  imageUrl   String    @db.VarChar
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
   authorId   Int?
-  user       user?      @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  liked_by   liked_by[]
+  user       User?     @relation(fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_a9c5f4ec6cceb1604b4a3c84c87")
+  likedBy    LikedBy[]
+
+  @@map("article")
 }
 
-model liked_by {
-  id        Int     @id @default(autoincrement())
+model LikedBy {
+  id        Int     @id(map: "PK_e97aaf39c77ee0533ce01ea15ca") @default(autoincrement())
   userId    Int
   articleId Int
-  article   article @relation(fields: [articleId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user      user    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_ba5875a744cbec464c384d3f72a")
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_edebe483970d1b27bc7b2229960")
+
+  @@map("liked_by")
 }
 
-model user {
-  id         Int        @id @default(autoincrement())
-  provider   String     @db.VarChar
-  providerId String     @db.VarChar
-  name       String     @db.VarChar
-  email      String     @db.VarChar
-  photo      String     @db.VarChar
-  article    article[]
-  liked_by   liked_by[]
+model User {
+  id         Int       @id(map: "PK_cace4a159ff9f2512dd42373760") @default(autoincrement())
+  provider   String    @db.VarChar
+  providerId String    @db.VarChar
+  name       String    @db.VarChar
+  email      String    @db.VarChar
+  photo      String    @db.VarChar
+  article    Article[]
+  likedBy    LikedBy[]
+
+  @@map("user")
 }

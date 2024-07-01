@@ -20,16 +20,13 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { plainToInstance } from 'class-transformer';
+import { Prisma, User } from '@prisma/client';
 import { SessionAuthGuard } from 'src/auth/guard/sessionAuth.guard';
 import { SessionCheckInterceptor } from 'src/auth/interceptors/sessionCheck.interceptor';
 import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
-import { User } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
 import { ArticleLimitService } from './article-limit.service';
 import { ArticleService } from './article.service';
-import { CreateArticleDto } from './dtos/createArticle.dto';
-import { ListArticleDto } from './dtos/listArticle.dto';
 
 @Controller('article')
 @UseFilters(HttpExceptionFilter)
@@ -49,11 +46,12 @@ export class ArticleController {
   async uploadArticle(
     @Session() session,
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: CreateArticleDto,
+    @Body() body: Prisma.ArticleCreateInput,
   ) {
-    const { id }: User = session.user;
+    const { id: userId }: User = session.user;
 
-    const isUploadAvailable = await this.articleLimitService.isAvailable(id);
+    const isUploadAvailable =
+      await this.articleLimitService.isAvailable(userId);
 
     if (!isUploadAvailable) {
       throw new HttpException(
@@ -62,18 +60,20 @@ export class ArticleController {
       );
     }
 
-    const user = await this.userService.findOne(id);
-
     const imageUrl = await this.articleService.uploadImageToBucket(file);
 
-    const newArticle: CreateArticleDto = {
+    const newArticle: Prisma.ArticleCreateInput = {
       canvasName: body.canvasName,
       imageUrl: imageUrl,
-      author: user,
+      user: {
+        connect: {
+          id: userId,
+        },
+      },
     };
 
     await this.articleService.createArticle(newArticle);
-    await this.articleLimitService.increasaeLimitCount(id);
+    await this.articleLimitService.increasaeLimitCount(userId);
 
     return { statusCode: 200, message: '게시글 업로드 성공!' };
   }
@@ -95,43 +95,19 @@ export class ArticleController {
       throw new ForbiddenException('권한이 없습니다.');
     }
 
-    const articleList =
-      orderBy === 'date'
-        ? await this.articleService.findPaginatedByDate(
-            page,
-            order,
-            author,
-            userId,
-          )
-        : await this.articleService.findPaginatedByLike(
-            page,
-            order,
-            author,
-            userId,
-          );
+    const articleList = await this.articleService.findPaginatedByOrder(
+      page,
+      orderBy,
+      order,
+      author,
+      userId,
+    );
 
-    // 게시글 리스트에 presignedUrl 붙여서 반환
     const articleListWithPresignedUrl = articleList.articles.map((article) => {
-      const isLiked = isLogin
-        ? article.likedBy.some((likedBy) => likedBy.userId === userId)
-        : false;
-      const isAuthor = isLogin ? article.author.id === userId : false;
-      const likeCount = article.likedBy.length;
-      const presignedUrl = session.presignedUrl + article.imageUrl;
-
-      const listArticle = plainToInstance(
-        ListArticleDto,
-        {
-          ...article,
-          isAuthor,
-          imageUrl: presignedUrl,
-          isLiked,
-          likeCount,
-        },
-        { excludeExtraneousValues: true, groups: isAuthor ? [] : ['masked'] },
-      );
-
-      return listArticle;
+      return {
+        ...article,
+        imageUrl: session.presignedUrl + article.imageUrl,
+      };
     });
 
     return {
@@ -180,35 +156,19 @@ export class ArticleController {
       throw new BadRequestException('잘못된 요청입니다.');
     }
 
-    const article = await this.articleService.findOne(articleId);
+    const { id: userId }: User = session.user ?? {};
 
-    const isLogin = session.user ? true : false;
+    const article = await this.articleService.findOne(articleId, userId);
 
-    // 게시글 리스트에 presignedUrl 붙여서 반환
-    const isLiked = isLogin
-      ? article.likedBy.some((likedBy) => likedBy.userId === session.user.id)
-      : false;
-    const isAuthor = isLogin ? article.author.id === session.user.id : false;
-    const likeCount = article.likedBy.length;
-    const presignedUrl = session.presignedUrl + article.imageUrl;
-
-    const listArticle = plainToInstance(
-      ListArticleDto,
-      {
-        ...article,
-        user: article.author,
-        isAuthor,
-        imageUrl: presignedUrl,
-        isLiked,
-        likeCount,
-      },
-      { excludeExtraneousValues: true, groups: isAuthor ? [] : ['masked'] },
-    );
+    const articleWithPresignedUrl = {
+      ...article,
+      imageUrl: session.presignedUrl + article.imageUrl,
+    };
 
     return {
       statusCode: 200,
       message: '게시글 조회 성공!',
-      data: listArticle,
+      data: articleWithPresignedUrl,
     };
   }
 
@@ -218,27 +178,15 @@ export class ArticleController {
     @Session() session,
     @Param('articleId') articleId: number,
   ) {
-    const { id } = session.user;
+    const { id: userId }: User = session.user;
 
-    const user = await this.userService.findOne(id);
-    const article = await this.articleService.findOne(articleId);
-    const likedBy = await this.articleService.findLikedBy(id, articleId);
+    const liked = await this.articleService.toggleLike(userId, articleId);
 
-    if (likedBy) {
-      await this.articleService.removeLikedBy(likedBy);
-      console.log(user.name + '님이 ' + article.id + ' 좋아요 취소!');
-      return { statusCode: 200, message: '좋아요 취소!' };
+    if (liked) {
+      return { statusCode: 200, message: '좋아요!' };
     }
 
-    const newLikedBy = {
-      user: user,
-      article: article,
-    };
-
-    await this.articleService.createLikedBy(newLikedBy);
-    console.log(user.name + '님이 ' + article.id + ' 좋아요!');
-
-    return { statusCode: 200, message: '좋아요!' };
+    return { statusCode: 200, message: '좋아요 취소!' };
   }
 
   @Delete(':articleId')
@@ -247,15 +195,9 @@ export class ArticleController {
     @Session() session,
     @Param('articleId') articleId: number,
   ) {
-    const { id } = session.user;
+    const { id: userId }: User = session.user;
 
-    const article = await this.articleService.findOne(articleId);
-
-    if (article.author.id !== id) {
-      throw new ForbiddenException('권한이 없습니다.');
-    }
-
-    await this.articleService.removeArticle(article);
+    await this.articleService.removeArticle(userId, articleId);
 
     return { statusCode: 200, message: '게시글 삭제 성공!' };
   }

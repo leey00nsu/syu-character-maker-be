@@ -7,16 +7,7 @@ import { RedisModule } from './redis/redis.module';
 import { RedisService } from './redis/redis.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug'],
-  });
-
-  const redisService = app.select(RedisModule).get(RedisService);
-
-  const redisClient = new RedisStore({
-    client: await redisService.getClient(),
-    prefix: 'session:',
-  });
+  const app = await NestFactory.create(AppModule);
 
   app.enableCors({
     origin: process.env.CLIENT_URL,
@@ -30,6 +21,13 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  const redisService = app.select(RedisModule).get(RedisService);
+
+  const redisClient = new RedisStore({
+    client: await redisService.getClient(),
+    prefix: 'session:',
+  });
 
   app.use(
     session({

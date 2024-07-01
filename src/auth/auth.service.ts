@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import axios from 'axios';
 import { OAuth2Client } from 'google-auth-library';
-import { CreateUserDto } from 'src/user/dtos/createUser.dto';
 
 @Injectable()
 export class AuthService {
@@ -36,7 +36,7 @@ export class AuthService {
       );
     }
 
-    const profile: CreateUserDto = {
+    const profile: Prisma.UserCreateInput = {
       provider: 'google',
       providerId: userInfo.data.sub,
       name: userInfo.data.name,

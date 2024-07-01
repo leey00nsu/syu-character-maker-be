@@ -4,22 +4,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { LikedBy, Prisma } from '@prisma/client';
 import * as crypto from 'crypto';
 import { common, objectstorage as os } from 'oci-sdk';
-import { Repository } from 'typeorm';
-import { CreateArticleDto } from './dtos/createArticle.dto';
-import { CreateLikedbyDto } from './dtos/createLikedby.dto';
-import { Article } from './entities/article.entity';
-import { LikedBy } from './entities/likedBy.entity';
+import { PrismaService } from 'src/prisma/prisma.service';
+import maskString from 'src/utils/mask-string';
 
 @Injectable()
 export class ArticleService {
   private readonly ociProvider: common.ConfigFileAuthenticationDetailsProvider;
-  constructor(
-    @InjectRepository(Article) private articleRepository: Repository<Article>,
-    @InjectRepository(LikedBy) private likedByRepository: Repository<LikedBy>,
-  ) {
+  constructor(private prisma: PrismaService) {
     // 오라클 클라우드 api config 파일 읽어오기
     const configurationFilePath = process.env.OCI_CONFIG_FILE_PATH;
     // const configurationFilePath = '~/.oci/config';
@@ -68,10 +62,10 @@ export class ArticleService {
     return objectUUID;
   }
 
-  createArticle(article: CreateArticleDto) {
-    const newArticle = this.articleRepository.create(article);
-
-    return this.articleRepository.save(newArticle);
+  createArticle(article: Prisma.ArticleCreateInput) {
+    return this.prisma.article.create({
+      data: article,
+    });
   }
 
   async getPresignedUrl() {
@@ -123,27 +117,76 @@ export class ArticleService {
     }
   }
 
-  async findPaginatedByDate(
+  async findPaginatedByOrder(
     page: number = 1,
+    orderBy: 'date' | 'likeCount',
     order: 'ASC' | 'DESC' = 'DESC',
     author: boolean,
     userId: number,
   ) {
     const pageSize = 10;
     const skip = (page - 1) * pageSize;
-    const [articles, total] = await this.articleRepository
-      .createQueryBuilder('article')
-      .leftJoinAndSelect('article.author', 'author')
-      .leftJoinAndSelect('article.likedBy', 'likedBy')
-      .leftJoinAndSelect('likedBy.user', 'user')
-      .where(author ? 'author.id = :userId' : '1=1', { userId })
-      .orderBy('article.createdAt', order)
-      .skip(skip)
-      .take(pageSize)
-      .getManyAndCount();
+    const query = {
+      where: author ? { authorId: userId } : {},
+      orderBy:
+        orderBy === 'date'
+          ? {
+              createdAt: order.toLowerCase() as Prisma.SortOrder,
+            }
+          : {
+              likedBy: {
+                _count: order.toLowerCase() as Prisma.SortOrder,
+              },
+            },
+      skip,
+      take: pageSize,
+    };
+
+    const [total, articles] = await this.prisma.$transaction([
+      this.prisma.article.count(query),
+      this.prisma.article.findMany({
+        ...query,
+        include: {
+          user: true,
+          likedBy: {
+            select: {
+              userId: true,
+            },
+          },
+          _count: {
+            select: {
+              likedBy: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    const articlesWithExtraInfo = articles.map((article) => {
+      return {
+        id: article.id,
+        canvasName: article.canvasName,
+        imageUrl: article.imageUrl,
+        createdAt: article.createdAt,
+        author: {
+          email:
+            article.authorId === userId
+              ? article.user.email
+              : maskString(article.user.email),
+          name:
+            article.authorId === userId
+              ? article.user.name
+              : maskString(article.user.name),
+          photo: article.user.photo,
+        },
+        isAuthor: article.authorId === userId,
+        isLiked: article.likedBy.some((likedBy) => likedBy.userId === userId),
+        likeCount: article._count.likedBy,
+      };
+    });
 
     return {
-      articles: articles,
+      articles: articlesWithExtraInfo,
       meta: {
         total,
         page,
@@ -152,110 +195,106 @@ export class ArticleService {
     };
   }
 
-  async findPaginatedByLike(
-    page: number = 1,
-    order: 'ASC' | 'DESC' = 'DESC',
-    author: boolean,
-    userId: number,
-  ) {
-    const pageSize = 10;
-    const skip = (page - 1) * pageSize;
-    const [articles, total] = await this.articleRepository
-      .createQueryBuilder('article')
-      .leftJoinAndSelect('article.author', 'author')
-      .leftJoinAndSelect('article.likedBy', 'likedBy')
-      .leftJoinAndSelect('likedBy.user', 'user')
-      .addSelect((subQuery) => {
-        return subQuery
-          .select('COUNT(liked_by.id)', 'like_count')
-          .from(LikedBy, 'liked_by')
-          .where('liked_by.articleId = article.id');
-      }, 'like_count')
-      .where(author ? 'author.id = :userId' : '1=1', { userId })
-      .orderBy('like_count', order)
-      .skip(skip)
-      .take(pageSize)
-      .getManyAndCount();
-
-    return {
-      articles: articles,
-      meta: {
-        total,
-        page,
-        lastPage: Math.ceil(total / pageSize),
+  async findOne(articleId: number, userId: number) {
+    const article = await this.prisma.article.findUnique({
+      where: { id: articleId },
+      include: {
+        user: true,
+        likedBy: {
+          select: {
+            userId: true,
+          },
+        },
+        _count: {
+          select: {
+            likedBy: true,
+          },
+        },
       },
-    };
-  }
-
-  async findPaginatedLiked(page: number = 1, userId: number) {
-    const pageSize = 10;
-    const skip = (page - 1) * pageSize;
-    const [articles, total] = await this.articleRepository
-      .createQueryBuilder('article')
-      .leftJoinAndSelect('article.author', 'author')
-      .leftJoinAndSelect('article.likedBy', 'likedBy')
-      .leftJoinAndSelect('likedBy.user', 'user')
-      .where('likedBy.userId = :userId', { userId })
-      .orderBy('article.createdAt', 'DESC')
-      .skip(skip)
-      .take(pageSize)
-      .getManyAndCount();
-
-    return {
-      articles: articles,
-      meta: {
-        total,
-        page,
-        lastPage: Math.ceil(total / pageSize),
-      },
-    };
-  }
-
-  async findOne(articleId: number) {
-    const article = await this.articleRepository
-      .createQueryBuilder('article')
-      .where('article.id = :articleId', { articleId })
-      .leftJoinAndSelect('article.author', 'author')
-      .leftJoinAndSelect('article.likedBy', 'likedBy')
-      .leftJoinAndSelect('likedBy.user', 'user')
-      .getOne();
+    });
 
     if (!article) {
       throw new NotFoundException('존재하지 않는 게시글입니다.');
     }
 
-    return article;
+    const articleWithExtraInfo = {
+      id: article.id,
+      canvasName: article.canvasName,
+      imageUrl: article.imageUrl,
+      createdAt: article.createdAt,
+      author: {
+        email:
+          article.authorId === userId
+            ? article.user.email
+            : maskString(article.user.email),
+        name:
+          article.authorId === userId
+            ? article.user.name
+            : maskString(article.user.name),
+        photo: article.user.photo,
+      },
+      isAuthor: article.authorId === userId,
+      isLiked: article.likedBy.some((likedBy) => likedBy.userId === userId),
+      likeCount: article._count.likedBy,
+    };
+
+    return articleWithExtraInfo;
   }
 
-  async findLikedUser(articleId: number) {
-    return await this.likedByRepository
-      .createQueryBuilder('likedBy')
-      .select('likedBy.userId')
-      .where('likedBy.articleId = :articleId', { articleId })
-      .getRawMany();
-  }
-
-  async createLikedBy(likedBy: CreateLikedbyDto) {
-    const newLikedBy = this.likedByRepository.create(likedBy);
-
-    return await this.likedByRepository.save(newLikedBy);
-  }
-
-  async findLikedBy(userId: number, articleId: number) {
-    return await this.likedByRepository.findOne({
-      where: { user: { id: userId }, article: { id: articleId } },
+  async createLikedBy(userId: number, articleId: number) {
+    return await this.prisma.likedBy.create({
+      data: {
+        userId,
+        articleId,
+      },
     });
   }
 
-  async removeLikedBy(likedBy: LikedBy) {
-    return await this.likedByRepository.remove(likedBy);
+  async findLikedBy(userId: number, articleId: number) {
+    const likedBy = await this.prisma.likedBy.findFirst({
+      where: { userId, articleId },
+    });
+
+    return likedBy;
   }
 
-  async removeArticle(article: Article) {
-    return await this.articleRepository.remove(article);
+  async removeLikedBy(likedBy: LikedBy) {
+    return await this.prisma.likedBy.delete({
+      where: {
+        id: likedBy.id,
+      },
+    });
+  }
+
+  async toggleLike(userId: number, articleId: number) {
+    const likedBy = await this.findLikedBy(userId, articleId);
+
+    if (likedBy) {
+      await this.removeLikedBy(likedBy);
+
+      return { liked: false };
+    }
+
+    await this.createLikedBy(userId, articleId);
+
+    return { liked: true };
+  }
+
+  async removeArticle(userId: number, articleId: number) {
+    const article = await this.prisma.article.findUnique({
+      where: { id: articleId, authorId: userId },
+    });
+
+    if (!article) {
+      throw new NotFoundException('권한이 없습니다.');
+    }
+
+    return await this.prisma.article.delete({
+      where: { id: articleId },
+    });
   }
 
   async findAll() {
-    return await this.articleRepository.find();
+    return await this.prisma.article.findMany();
   }
 }

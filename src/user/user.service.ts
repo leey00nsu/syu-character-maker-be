@@ -1,36 +1,33 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 
-import { Repository } from 'typeorm';
-import { CreateUserDto } from './dtos/createUser.dto';
-import { User } from './entities/user.entity';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class UserService {
-  constructor(
-    @InjectRepository(User)
-    private usersRepository: Repository<User>,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   async findAll() {
-    return await this.usersRepository.find();
+    return await this.prisma.user.findMany();
   }
 
   async findOne(id: number) {
-    return await this.usersRepository.findOne({ where: { id } });
+    return await this.prisma.user.findUnique({ where: { id } });
   }
 
   async findOneByProviderId(providerId: string) {
-    return await this.usersRepository.findOne({ where: { providerId } });
+    return await this.prisma.user.findFirst({
+      where: { providerId },
+    });
   }
 
-  async create(profile: CreateUserDto) {
-    const newUser = this.usersRepository.create(profile);
-
-    return await this.usersRepository.save(newUser);
+  async create(profile: Prisma.UserCreateInput) {
+    return await this.prisma.user.create({
+      data: profile,
+    });
   }
 
   async remove(id: number) {
-    await this.usersRepository.delete(id);
+    await this.prisma.user.delete({ where: { id } });
   }
 }
