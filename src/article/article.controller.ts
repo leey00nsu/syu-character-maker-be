@@ -180,7 +180,7 @@ export class ArticleController {
   ) {
     const { id: userId }: User = session.user;
 
-    const liked = await this.articleService.toggleLike(userId, articleId);
+    const { liked } = await this.articleService.toggleLike(userId, articleId);
 
     if (liked) {
       return { statusCode: 200, message: '좋아요!' };

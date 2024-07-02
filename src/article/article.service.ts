@@ -16,18 +16,7 @@ export class ArticleService {
   constructor(
     private prisma: PrismaService,
     private ociService: OciService,
-  ) {
-    // // 오라클 클라우드 api config 파일 읽어오기
-    // const configurationFilePath = process.env.OCI_CONFIG_FILE_PATH;
-    // // const configurationFilePath = '~/.oci/config';
-    // const configProfile = 'DEFAULT';
-    // const provider: common.ConfigFileAuthenticationDetailsProvider =
-    //   new common.ConfigFileAuthenticationDetailsProvider(
-    //     configurationFilePath,
-    //     configProfile,
-    //   );
-    // this.ociProvider = provider;
-  }
+  ) {}
 
   async uploadImageToBucket(file: Express.Multer.File) {
     const bucket: string = 'syucharactermaker-bucket';
