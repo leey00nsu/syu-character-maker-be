@@ -6,32 +6,34 @@ import {
 } from '@nestjs/common';
 import { LikedBy, Prisma } from '@prisma/client';
 import * as crypto from 'crypto';
-import { common, objectstorage as os } from 'oci-sdk';
+import { objectstorage as os } from 'oci-sdk';
+import { OciService } from 'src/oci/oci.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import maskString from 'src/utils/mask-string';
 
 @Injectable()
 export class ArticleService {
-  private readonly ociProvider: common.ConfigFileAuthenticationDetailsProvider;
-  constructor(private prisma: PrismaService) {
-    // 오라클 클라우드 api config 파일 읽어오기
-    const configurationFilePath = process.env.OCI_CONFIG_FILE_PATH;
-    // const configurationFilePath = '~/.oci/config';
-    const configProfile = 'DEFAULT';
-    const provider: common.ConfigFileAuthenticationDetailsProvider =
-      new common.ConfigFileAuthenticationDetailsProvider(
-        configurationFilePath,
-        configProfile,
-      );
-
-    this.ociProvider = provider;
+  constructor(
+    private prisma: PrismaService,
+    private ociService: OciService,
+  ) {
+    // // 오라클 클라우드 api config 파일 읽어오기
+    // const configurationFilePath = process.env.OCI_CONFIG_FILE_PATH;
+    // // const configurationFilePath = '~/.oci/config';
+    // const configProfile = 'DEFAULT';
+    // const provider: common.ConfigFileAuthenticationDetailsProvider =
+    //   new common.ConfigFileAuthenticationDetailsProvider(
+    //     configurationFilePath,
+    //     configProfile,
+    //   );
+    // this.ociProvider = provider;
   }
 
   async uploadImageToBucket(file: Express.Multer.File) {
     const bucket: string = 'syucharactermaker-bucket';
     const objectUUID: string = crypto.randomUUID();
     const client = new os.ObjectStorageClient({
-      authenticationDetailsProvider: this.ociProvider,
+      authenticationDetailsProvider: this.ociService.getProvider(),
     });
 
     try {
@@ -73,7 +75,7 @@ export class ArticleService {
     const timeExpires = new Date(Date.now() + 1000 * 60 * 60); // 유효 시간 1시간
 
     const client = new os.ObjectStorageClient({
-      authenticationDetailsProvider: this.ociProvider,
+      authenticationDetailsProvider: this.ociService.getProvider(),
     });
 
     try {
