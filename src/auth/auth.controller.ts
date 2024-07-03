@@ -11,8 +11,10 @@ import {
   UseInterceptors,
   forwardRef,
 } from '@nestjs/common';
+import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { User } from '@prisma/client';
 import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
+import { UserResponseDto } from 'src/user/dtos/user-response.dto';
 import { UserService } from 'src/user/user.service';
 import { AuthService } from './auth.service';
 import { SessionAuthGuard } from './guard/sessionAuth.guard';
@@ -28,6 +30,11 @@ export class AuthController {
   ) {}
 
   @Post('google')
+  @ApiOperation({
+    summary: '구글 로그인',
+    description: '구글 로그인',
+  })
+  @ApiOkResponse({ description: '전체 유저 수', type: UserResponseDto })
   async googleAuth(@Query() query, @Session() session) {
     const { code } = query;
 
@@ -62,6 +69,11 @@ export class AuthController {
 
   @Post('logout')
   @UseGuards(SessionAuthGuard)
+  @ApiOperation({
+    summary: '로그아웃',
+    description: '로그아웃',
+  })
+  @ApiOkResponse({ description: '로그아웃', type: null })
   logout(@Session() session) {
     console.log('logout', new Date());
 
@@ -75,6 +87,11 @@ export class AuthController {
 
   @Get('user')
   @UseGuards(SessionAuthGuard)
+  @ApiOperation({
+    summary: '현재 유저 정보',
+    description: '현재 유저 정보',
+  })
+  @ApiOkResponse({ description: '유저 정보', type: UserResponseDto })
   async getUser(@Session() session) {
     console.log('user', new Date());
 
