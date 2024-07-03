@@ -20,13 +20,24 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBody,
+  ApiConsumes,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+} from '@nestjs/swagger';
 import { Prisma, User } from '@prisma/client';
 import { SessionAuthGuard } from 'src/auth/guard/sessionAuth.guard';
 import { SessionCheckInterceptor } from 'src/auth/interceptors/sessionCheck.interceptor';
 import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
-import { UserService } from 'src/user/user.service';
 import { ArticleLimitService } from './article-limit.service';
 import { ArticleService } from './article.service';
+import { ArticleCountResponseDto } from './dtos/article-count-response.dto';
+import { ArticleListResponseDto } from './dtos/article-list-response.dto';
+import { ArticleResponseDto } from './dtos/article-response.dto';
+import { ArticleUploadLimitResponse } from './dtos/article-upload-limit-response.dts';
+import { CreateArticleRequestDto } from './dtos/create-article-request.dto';
 
 @Controller('article')
 @UseFilters(HttpExceptionFilter)
@@ -34,8 +45,6 @@ import { ArticleService } from './article.service';
 export class ArticleController {
   constructor(
     private articleService: ArticleService,
-    @Inject(forwardRef(() => UserService))
-    private userService: UserService,
     @Inject(forwardRef(() => ArticleLimitService))
     private articleLimitService: ArticleLimitService,
   ) {}
@@ -43,10 +52,17 @@ export class ArticleController {
   @Post('upload')
   @UseGuards(SessionAuthGuard)
   @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({
+    summary: '게시글 업로드',
+    description: '세션 기반 인증 필요',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateArticleRequestDto })
+  @ApiOkResponse({ description: '게시글 업로드 성공', type: null })
   async uploadArticle(
     @Session() session,
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: Prisma.ArticleCreateInput,
+    @Body() body: CreateArticleRequestDto,
   ) {
     const { id: userId }: User = session.user;
 
@@ -80,6 +96,35 @@ export class ArticleController {
 
   @Get('')
   @UseInterceptors(SessionCheckInterceptor)
+  @ApiOperation({
+    summary: '게시글 목록',
+    description: '세션 기반 인증에 따라 결과 필터링',
+  })
+  @ApiQuery({
+    name: 'page',
+    type: Number,
+    required: true,
+    description: '페이지 번호',
+  })
+  @ApiQuery({
+    name: 'orderBy',
+    enum: ['date', 'likeCount'],
+    required: true,
+    description: '정렬 기준',
+  })
+  @ApiQuery({
+    name: 'order',
+    enum: ['ASC', 'DESC'],
+    required: true,
+    description: '정렬 순서',
+  })
+  @ApiQuery({
+    name: 'author',
+    type: Boolean,
+    required: false,
+    description: '작성자 게시글만 조회',
+  })
+  @ApiOkResponse({ description: '게시글 목록', type: ArticleListResponseDto })
   async getArticleList(
     @Session() session,
     @Query('page') page: number,
@@ -122,6 +167,14 @@ export class ArticleController {
 
   @Get('limit')
   @UseGuards(SessionAuthGuard)
+  @ApiOperation({
+    summary: '게시글 업로드 제한',
+    description: '세션 기반 인증 필요',
+  })
+  @ApiOkResponse({
+    description: '게시글 제한 조회 성공',
+    type: ArticleUploadLimitResponse,
+  })
   async getArticleLimit(@Session() session) {
     const { id } = session.user;
 
@@ -137,6 +190,14 @@ export class ArticleController {
   }
 
   @Get('total')
+  @ApiOperation({
+    summary: '전체 게시글 수',
+    description: '전체 게시글 수',
+  })
+  @ApiOkResponse({
+    description: '전체 게시글 수 조회 성공',
+    type: ArticleCountResponseDto,
+  })
   async getTotalArticleCount() {
     const totalArticles = await this.articleService.findAll();
 
@@ -151,6 +212,17 @@ export class ArticleController {
 
   @Get(':articleId')
   @UseInterceptors(SessionCheckInterceptor)
+  @ApiOperation({
+    summary: '게시글 정보',
+    description: '세션 기반 인증에 따라 결과 필터링',
+  })
+  @ApiQuery({
+    name: 'articleId',
+    type: Number,
+    required: true,
+    description: '게시글 ID',
+  })
+  @ApiOkResponse({ description: '게시글 목록', type: ArticleResponseDto })
   async getArticle(@Param('articleId') articleId: number, @Session() session) {
     if (Number.isNaN(articleId)) {
       throw new BadRequestException('잘못된 요청입니다.');
@@ -174,6 +246,17 @@ export class ArticleController {
 
   @Post(':articleId/like')
   @UseGuards(SessionAuthGuard)
+  @ApiOperation({
+    summary: '게시글 좋아요 토글',
+    description: '세션 기반 인증 필요',
+  })
+  @ApiQuery({
+    name: 'articleId',
+    type: Number,
+    required: true,
+    description: '게시글 ID',
+  })
+  @ApiOkResponse({ description: '게시글 좋아요 토글 성공', type: null })
   async toggleLikeArticle(
     @Session() session,
     @Param('articleId') articleId: number,
@@ -191,6 +274,17 @@ export class ArticleController {
 
   @Delete(':articleId')
   @UseGuards(SessionAuthGuard)
+  @ApiOperation({
+    summary: '게시글 삭제',
+    description: '세션 기반 인증 필요',
+  })
+  @ApiQuery({
+    name: 'articleId',
+    type: Number,
+    required: true,
+    description: '게시글 ID',
+  })
+  @ApiOkResponse({ description: '게시글 삭제 성공', type: null })
   async deleteArticle(
     @Session() session,
     @Param('articleId') articleId: number,
