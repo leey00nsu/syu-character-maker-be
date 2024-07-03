@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import RedisStore from 'connect-redis';
 import * as session from 'express-session';
 import { AppModule } from './app.module';
@@ -10,6 +11,15 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
+
+  const config = new DocumentBuilder()
+    .setTitle('character-maker API')
+    .setDescription('character-maker API')
+    .setVersion('1.0')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document);
 
   app.enableCors({
     origin: process.env.CLIENT_URL,
