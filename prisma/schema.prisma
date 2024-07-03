@@ -7,6 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+generator markdown {
+  provider = "prisma-markdown"
+  output   = "./ERD.md"
+  title    = "ERD"
+}
+
 model Article {
   id         Int       @id(map: "PK_40808690eb7b915046558c0f81b") @default(autoincrement())
   canvasName String    @db.VarChar
