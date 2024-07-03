@@ -8,7 +8,7 @@ export class AppController {
 
   @Get()
   @ApiOperation({ summary: '서버 상태 확인', description: '서버 상태 확인' })
-  @ApiOkResponse({ description: '서버가 정상 작동 중', type: String })
+  @ApiOkResponse({ description: '서버가 정상 작동 중', example: 'healthy' })
   checkHealthy() {
     return this.appService.check();
   }
