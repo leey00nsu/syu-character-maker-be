@@ -23,11 +23,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBody,
   ApiConsumes,
-  ApiOkResponse,
+  ApiExtraModels,
   ApiOperation,
   ApiQuery,
+  getSchemaPath,
 } from '@nestjs/swagger';
 import { Prisma, User } from '@prisma/client';
+import { ApiCommonResponse } from 'src/api-common-response.decorator';
 import { SessionAuthGuard } from 'src/auth/guard/sessionAuth.guard';
 import { SessionCheckInterceptor } from 'src/auth/interceptors/sessionCheck.interceptor';
 import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
@@ -58,7 +60,9 @@ export class ArticleController {
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateArticleRequestDto })
-  @ApiOkResponse({ description: '게시글 업로드 성공', type: null })
+  @ApiCommonResponse({
+    description: '게시글 업로드 성공',
+  })
   async uploadArticle(
     @Session() session,
     @UploadedFile() file: Express.Multer.File,
@@ -124,7 +128,11 @@ export class ArticleController {
     required: false,
     description: '작성자 게시글만 조회',
   })
-  @ApiOkResponse({ description: '게시글 목록', type: ArticleListResponseDto })
+  @ApiExtraModels(ArticleListResponseDto)
+  @ApiCommonResponse({
+    description: '게시글 목록',
+    $ref: getSchemaPath(ArticleListResponseDto),
+  })
   async getArticleList(
     @Session() session,
     @Query('page') page: number,
@@ -171,9 +179,10 @@ export class ArticleController {
     summary: '게시글 업로드 제한',
     description: '세션 기반 인증 필요',
   })
-  @ApiOkResponse({
+  @ApiExtraModels(ArticleUploadLimitResponse)
+  @ApiCommonResponse({
     description: '게시글 제한 조회 성공',
-    type: ArticleUploadLimitResponse,
+    $ref: getSchemaPath(ArticleUploadLimitResponse),
   })
   async getArticleLimit(@Session() session) {
     const { id } = session.user;
@@ -194,9 +203,10 @@ export class ArticleController {
     summary: '전체 게시글 수',
     description: '전체 게시글 수',
   })
-  @ApiOkResponse({
+  @ApiExtraModels(ArticleCountResponseDto)
+  @ApiCommonResponse({
     description: '전체 게시글 수 조회 성공',
-    type: ArticleCountResponseDto,
+    $ref: getSchemaPath(ArticleCountResponseDto),
   })
   async getTotalArticleCount() {
     const totalArticles = await this.articleService.findAll();
@@ -222,7 +232,11 @@ export class ArticleController {
     required: true,
     description: '게시글 ID',
   })
-  @ApiOkResponse({ description: '게시글 목록', type: ArticleResponseDto })
+  @ApiExtraModels(ArticleResponseDto)
+  @ApiCommonResponse({
+    description: '게시글 목록',
+    $ref: getSchemaPath(ArticleResponseDto),
+  })
   async getArticle(@Param('articleId') articleId: number, @Session() session) {
     if (Number.isNaN(articleId)) {
       throw new BadRequestException('잘못된 요청입니다.');
@@ -256,7 +270,9 @@ export class ArticleController {
     required: true,
     description: '게시글 ID',
   })
-  @ApiOkResponse({ description: '게시글 좋아요 토글 성공', type: null })
+  @ApiCommonResponse({
+    description: '게시글 좋아요 토글 성공',
+  })
   async toggleLikeArticle(
     @Session() session,
     @Param('articleId') articleId: number,
@@ -284,7 +300,9 @@ export class ArticleController {
     required: true,
     description: '게시글 ID',
   })
-  @ApiOkResponse({ description: '게시글 삭제 성공', type: null })
+  @ApiCommonResponse({
+    description: '게시글 삭제 성공',
+  })
   async deleteArticle(
     @Session() session,
     @Param('articleId') articleId: number,

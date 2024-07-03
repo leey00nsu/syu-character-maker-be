@@ -11,8 +11,9 @@ import {
   UseInterceptors,
   forwardRef,
 } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation } from '@nestjs/swagger';
+import { ApiExtraModels, ApiOperation, getSchemaPath } from '@nestjs/swagger';
 import { User } from '@prisma/client';
+import { ApiCommonResponse } from 'src/api-common-response.decorator';
 import { HttpExceptionFilter } from 'src/filters/http-exception.filter';
 import { UserResponseDto } from 'src/user/dtos/user-response.dto';
 import { UserService } from 'src/user/user.service';
@@ -32,9 +33,12 @@ export class AuthController {
   @Post('google')
   @ApiOperation({
     summary: '구글 로그인',
-    description: '구글 로그인',
   })
-  @ApiOkResponse({ description: '전체 유저 수', type: UserResponseDto })
+  @ApiExtraModels(UserResponseDto)
+  @ApiCommonResponse({
+    description: '유저 정보',
+    $ref: getSchemaPath(UserResponseDto),
+  })
   async googleAuth(@Query() query, @Session() session) {
     const { code } = query;
 
@@ -71,9 +75,11 @@ export class AuthController {
   @UseGuards(SessionAuthGuard)
   @ApiOperation({
     summary: '로그아웃',
+    description: '세션 기반 인증 필요',
+  })
+  @ApiCommonResponse({
     description: '로그아웃',
   })
-  @ApiOkResponse({ description: '로그아웃', type: null })
   logout(@Session() session) {
     console.log('logout', new Date());
 
@@ -89,9 +95,13 @@ export class AuthController {
   @UseGuards(SessionAuthGuard)
   @ApiOperation({
     summary: '현재 유저 정보',
-    description: '현재 유저 정보',
+    description: '세션 기반 인증 필요',
   })
-  @ApiOkResponse({ description: '유저 정보', type: UserResponseDto })
+  @ApiExtraModels(UserResponseDto)
+  @ApiCommonResponse({
+    description: '유저 정보',
+    $ref: getSchemaPath(UserResponseDto),
+  })
   async getUser(@Session() session) {
     console.log('user', new Date());
 
